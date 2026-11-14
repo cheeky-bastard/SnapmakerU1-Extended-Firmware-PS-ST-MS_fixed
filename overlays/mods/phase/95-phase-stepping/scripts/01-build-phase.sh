@@ -2,12 +2,44 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 : "${CREATE_FIRMWARE:?Run through create_firmware.sh}"
-: "${MCU_CROSS_PREFIX:?Use the phase build Docker image with GNU Arm 10.3-2021.10}"
 SOURCE_URL=https://github.com/justinh-rahb/u1-klipper.git
 SOURCE_SHA=0bf75e9047c42268f8b699fa917af9d0b4587d8a
 SOURCE_DIR="$CACHE_DIR/u1-phase-$SOURCE_SHA"
 HOST_DIR="$ROOTFS_DIR/home/lava/klipper"
 SHARE_DIR="$ROOTFS_DIR/usr/local/share/phase-stepping"
+
+# The MCU images must be built with GNU Arm 10.3-2021.10, the stock U1
+# compiler. Use MCU_CROSS_PREFIX when the build image provides it; otherwise
+# fetch ARM's release for this host into the cache and check its hash.
+if [[ -z "${MCU_CROSS_PREFIX:-}" ]]; then
+  TOOLCHAIN_NAME=gcc-arm-none-eabi-10.3-2021.10
+  case "$(uname -m)" in
+    aarch64|arm64)
+      TOOLCHAIN_ARCH=aarch64
+      TOOLCHAIN_SHA256=f605b5f23ca898e9b8b665be208510a54a6e9fdd0fa5bfc9592002f6e7431208 ;;
+    x86_64)
+      TOOLCHAIN_ARCH=x86_64
+      TOOLCHAIN_SHA256=97dbb4f019ad1650b732faffcc881689cedc14e2b7ee863d390e0a41ef16c9a3 ;;
+    *)
+      echo "No GNU Arm 10.3-2021.10 release for $(uname -m); set MCU_CROSS_PREFIX" >&2
+      exit 1 ;;
+  esac
+  TOOLCHAIN_TAR="$CACHE_DIR/$TOOLCHAIN_NAME-$TOOLCHAIN_ARCH-linux.tar.bz2"
+  TOOLCHAIN_DIR="$CACHE_DIR/$TOOLCHAIN_NAME-$TOOLCHAIN_ARCH"
+  if [[ ! -x "$TOOLCHAIN_DIR/bin/arm-none-eabi-gcc" ]]; then
+    if ! echo "$TOOLCHAIN_SHA256  $TOOLCHAIN_TAR" | sha256sum --check --status 2>/dev/null; then
+      wget -q -O "$TOOLCHAIN_TAR.tmp" \
+        "https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/$TOOLCHAIN_NAME-$TOOLCHAIN_ARCH-linux.tar.bz2"
+      mv "$TOOLCHAIN_TAR.tmp" "$TOOLCHAIN_TAR"
+    fi
+    echo "$TOOLCHAIN_SHA256  $TOOLCHAIN_TAR" | sha256sum --check --status
+    rm -rf "$TOOLCHAIN_DIR.tmp"
+    mkdir -p "$TOOLCHAIN_DIR.tmp"
+    tar -xjf "$TOOLCHAIN_TAR" -C "$TOOLCHAIN_DIR.tmp" --strip-components=1
+    mv "$TOOLCHAIN_DIR.tmp" "$TOOLCHAIN_DIR"
+  fi
+  MCU_CROSS_PREFIX="$TOOLCHAIN_DIR/bin/arm-none-eabi-"
+fi
 
 mkdir -p "$SOURCE_DIR"
 if [[ ! -d "$SOURCE_DIR/.git" ]]; then
