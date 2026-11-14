@@ -4,7 +4,7 @@ set -euo pipefail
 : "${CREATE_FIRMWARE:?Run through create_firmware.sh}"
 : "${MCU_CROSS_PREFIX:?Use the phase build Docker image with GNU Arm 10.3-2021.10}"
 SOURCE_URL=https://github.com/justinh-rahb/u1-klipper.git
-SOURCE_SHA=f1de7c2c6fa792d1d54903dce8c3e4593cc09294
+SOURCE_SHA=fb82097dc158f903774bc80193c2336195b82638
 SOURCE_DIR="$CACHE_DIR/u1-phase-$SOURCE_SHA"
 HOST_DIR="$ROOTFS_DIR/home/lava/klipper"
 SHARE_DIR="$ROOTFS_DIR/usr/local/share/phase-stepping"
