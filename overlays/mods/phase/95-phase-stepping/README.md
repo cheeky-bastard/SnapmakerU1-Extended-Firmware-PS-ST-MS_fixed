@@ -2,9 +2,9 @@
 
 Build profile: `extended-multiace-phase`, based on paxx12 `1e702da` and stock
 2.0.0.205. The source is pinned to `justinh-rahb/u1-klipper` commit
-`e309b9dd98c8a520f4cc4ea95908bf42a4b7abc3`; the fork's main branch is unused.
+`f1de7c2c6fa792d1d54903dce8c3e4593cc09294`; the fork's main branch is unused.
 
-The mod enables the mainboard's 10 kHz backend, with coil writes sent by DMA, and installs matching
+The mod enables the mainboard's 10 kHz backend, with coil writes sent by DMA on every bus each tick, and installs matching
 host modules, a rebuilt aarch64 C helper, recovery copies and metadata. It
 preserves the stock host and existing paxx patches. The helper must load in
 the target image's Python/libc before packaging succeeds.
