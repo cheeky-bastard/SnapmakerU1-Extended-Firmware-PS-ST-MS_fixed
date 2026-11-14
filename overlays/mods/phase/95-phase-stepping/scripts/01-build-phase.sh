@@ -47,7 +47,7 @@ done
 printf '%s\n' "$MCU_VERSION" > "$BUILD_DIR/MCU_DESC"
 printf '%s\n' "$MCU_VERSION" > "$ROOTFS_DIR/home/lava/firmware_MCU/VERSION"
 # Keep recovery hashes consistent, including any untouched vendor MCU images.
-(cd "$ROOTFS_DIR/home/lava/firmware_MCU"; md5sum ./*.bin > md5sum.txt)
+(cd "$ROOTFS_DIR/home/lava/firmware_MCU"; md5sum VERSION *.bin > md5sum.txt; md5sum --check --status md5sum.txt)
 
 # Copy only new modules, preserving the image's existing host and paxx patches.
 for module in phase_stepping phase_calibrate phase_limits motor_kinematics motor_harmonics; do
