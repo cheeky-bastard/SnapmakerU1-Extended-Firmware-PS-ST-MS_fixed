@@ -1,0 +1,154 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-PackageHomePage: https://github.com/paxx12-snapmaker-u1/SnapmakerU1-Extended-Firmware
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 @paxx12, @horzadome
+
+# Builds the phase-stepping branch and uploads the firmware as workflow
+# artifacts. It publishes no release. The phase mod fetches its pinned
+# GNU Arm 10.3-2021.10 toolchain itself (see overlays/mods/phase).
+
+name: Phase Stepping Build
+
+on:
+  push:
+    branches:
+      - feat/u1-phase-stepping
+    paths-ignore:
+      - '*.md'
+  workflow_dispatch:
+
+jobs:
+  phase-firmware-build:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image with cache
+      uses: docker/build-push-action@v6
+      with:
+        context: .github/dev
+        load: true
+        tags: snapmaker-u1-dev:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: BUILDKIT_INLINE_CACHE=1
+
+    - name: Load values vars.mk
+      run: cat vars.mk >> "$GITHUB_ENV"
+
+    - name: Restore Firmwares Cache
+      uses: actions/cache/restore@v4
+      with:
+        path: firmware/
+        key: firmwares-${{ runner.os }}-${{ runner.arch }}-${{ env.FIRMWARE_VERSION }}
+
+    - name: Restore Kernel Cache
+      uses: actions/cache/restore@v4
+      with:
+        path: tmp/kernel/
+        key: kernels-${{ runner.os }}-${{ runner.arch }}-${{ env.KERNEL_SHA }}
+
+    - name: Restore ccache
+      uses: actions/cache/restore@v4
+      with:
+        path: tmp/ccache/
+        key: ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}
+        restore-keys: |
+          ccache-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Restore downloads cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          tmp/cache/**/.git
+          tmp/cache/**/*.zip
+          tmp/cache/**/*.gz
+          tmp/cache/**/*.xz
+          tmp/cache/gcc-arm-none-eabi-*.tar.bz2
+        key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}
+        restore-keys: |
+          downloads-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Set GIT_VERSION
+      shell: bash
+      run: |
+        nextVer=$(./scripts/next_version.sh phase "$(git rev-parse --short HEAD)")
+        echo "GIT_VERSION=${nextVer#v}" | tee -a $GITHUB_ENV
+
+    - name: Download firmware
+      run: ./dev.sh make firmware
+
+    - name: Build with Extended Fluidd + phase stepping (experimental)
+      run: ./dev.sh make build PROFILE=extended-phase OUTPUT_FILE=U1_extended-phase_${{ env.GIT_VERSION }}_upgrade.bin
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: extended-phase-build
+        path: U1_extended-phase_*_upgrade.bin
+
+    - name: Build with Extended Fluidd + multiACE firmware (experimental)
+      run: ./dev.sh make build PROFILE=extended-multiace OUTPUT_FILE=U1_extended-multiace_${{ env.GIT_VERSION }}_upgrade.bin
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: extended-multiace-build
+        path: U1_extended-multiace_*_upgrade.bin
+
+    - name: Build with Extended Fluidd + AFC firmware (experimental)
+      run: ./dev.sh make build PROFILE=extended-afc OUTPUT_FILE=U1_extended-afc_${{ env.GIT_VERSION }}_upgrade.bin
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: extended-afc-build
+        path: U1_extended-afc_*_upgrade.bin
+
+    - name: Checksums
+      run: sha256sum U1_*_upgrade.bin | tee SHA256SUMS
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: sha256sums
+        path: SHA256SUMS
+
+    - name: Save Firmwares Cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: firmware/
+        key: firmwares-${{ runner.os }}-${{ runner.arch }}-${{ env.FIRMWARE_VERSION }}
+      continue-on-error: true
+
+    - name: Save Kernel Cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: tmp/kernel/
+        key: kernels-${{ runner.os }}-${{ runner.arch }}-${{ env.KERNEL_SHA }}
+      continue-on-error: true
+
+    - name: Save ccache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: tmp/ccache/
+        key: ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}-${{ github.run_id }}
+
+    - name: Save downloads cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          tmp/cache/**/.git
+          tmp/cache/**/*.zip
+          tmp/cache/**/*.gz
+          tmp/cache/**/*.xz
+          tmp/cache/gcc-arm-none-eabi-*.tar.bz2
+        key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}-${{ github.run_id }}
