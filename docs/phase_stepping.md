@@ -4,7 +4,7 @@ title: Phase Stepping
 
 # Phase Stepping (experimental)
 
-> **Warning**: Phase stepping drives the X/Y motor coil currents directly from the mainboard MCU at 10 kHz instead of using step pulses. It is experimental and has been validated on one U1.
+> **Warning**: Phase stepping drives the X/Y motor coil currents directly from the mainboard MCU at 10 kHz instead of using step pulses. It is experimental: tested in depth on one U1 and now running on a second. So far it appears to help (quieter motion, smoother walls) with no drawbacks observed: prints look the same and run at the same speed. That is not yet proven across many printers.
 
 The `phase` mod (`PROFILE=extended-phase`, combinable with other mods) builds the mainboard firmware from [`justinh-rahb/u1-klipper`](https://github.com/justinh-rahb/u1-klipper) (pinned in `overlays/mods/phase/95-phase-stepping/scripts/01-build-phase.sh`), a U1 port of [Hannott/kalico](https://github.com/Hannott/kalico)'s phase stepping, and installs the matching Klipper modules. It requires an **AT32 mainboard**: `klippy.log` shows `Main MCU model: stm32f103xe`. On other mainboards do not add the phase config.
 
@@ -12,7 +12,16 @@ The MCU images need GNU Arm 10.3-2021.10. Set `MCU_CROSS_PREFIX` to use one from
 
 ## Install
 
-Same as any Extended release ([install guide](install.md)); use the `U1_extended-phase_*_upgrade.bin` build: copy the `.bin` to the root of a FAT32 USB drive, then on the touchscreen go to `Settings` > `About` > `Firmware Version` > `Local Update`. The update also flashes the mainboard and toolhead MCUs.
+Each build is Extended plus the named mods:
+
+| File | Contents |
+|---|---|
+| `U1_extended_*_upgrade.bin` | Extended, **no** phase stepping |
+| `U1_extended-phase_*_upgrade.bin` | Extended + phase stepping |
+| `U1_extended-multiace-phase_*_upgrade.bin` | Extended + multiACE + phase stepping |
+| `U1_extended-afc-phase_*_upgrade.bin` | Extended + AFC + phase stepping |
+
+Install the same way as any Extended release ([install guide](install.md)): copy the `.bin` to the root of a FAT32 USB drive, then on the touchscreen go to `Settings` > `About` > `Firmware Version` > `Local Update`. The update also flashes the mainboard and toolhead MCUs.
 
 Phase stepping is **off** after installing. Nothing changes until you add the config.
 
@@ -89,6 +98,24 @@ PHASE_STEPPING_CALIBRATE STEPPER=stepper_x POINT=135,167,10
 
 - Use `GRAPH=0` on the printer. Plotting runs matplotlib on the U1's small host; copy the CSV from `/tmp` and plot elsewhere.
 - Sweeps whose top speed cannot be reached within the travel limit now fail with "a speed ramp needs more travel" (20–180 mm/s plans fine; 20–200 does not).
+- To keep calibration one click away, add this macro to `phase.cfg`:
+
+  ```ini
+  [gcode_macro PHASE_CALIBRATE_XY]
+  description: Calibrate phase stepping angle corrections for X and Y (T0 accelerometer)
+  gcode:
+    {% if printer.toolhead.homed_axes != "xyz" %}
+      G28
+    {% endif %}
+    T0 A0
+    PHASE_STEPPING_ENABLE STEPPER=stepper_x
+    PHASE_STEPPING_ENABLE STEPPER=stepper_y
+    PHASE_STEPPING_CALIBRATE STEPPER=stepper_x POINT=135,167,10 GRAPH=0
+    PHASE_STEPPING_CALIBRATE STEPPER=stepper_y POINT=135,167,10 GRAPH=0
+    RESPOND MSG="Phase calibration done. Review the results, then run SAVE_CONFIG to keep the corrections."
+  ```
+
+  Each run starts from no correction, so rerunning recalibrates from scratch.
 - `SAVE_CONFIG` stores accepted corrections. On the test printer calibration found nothing worth correcting: 2nd/4th harmonics were below noise, and the remaining vibration is a frame resonance around 55–80 Hz, which angle corrections cannot cancel.
 
 ## Validation on a U1 (AT32)
@@ -96,7 +123,10 @@ PHASE_STEPPING_CALIBRATE STEPPER=stepper_x POINT=135,167,10
 - Single-motor tests and combined motion at 10–300 mm/s; ABS prints with travel up to 500 mm/s, accel up to 10000.
 - Homing, `M84`, T0↔T1 tool changes, `M112` and touchscreen emergency stop, print cancel.
 - MCU update 2–5 µs of each 100 µs tick, 0 lost ticks, 0 MCU serial overruns across full prints.
-- Sound: the speed-dependent stepper tones (1–3 kHz) disappear; overall loudness is similar.
+- Sound: the speed-dependent stepper tones (1–3 kHz) disappear; overall loudness is similar. Motion feels quieter.
+- Prints: full ABS cubes with phase on and off came out the same speed; the phase-on cube's walls look smoother.
+- Input shaping: `SHAPER_CALIBRATE` with phase on and off gave the same result (X mzv 53.4 Hz, Y mzv 46.6 Hz; resonance peaks at 51 / 45 Hz within run-to-run noise). Existing shaper settings stay valid; no need to recalibrate.
+- Also built combined with multiACE and AFC. Neither touches the MCU firmware or the Klipper files phase stepping patches; those combinations have not been print-tested.
 
 ## Known issues
 
