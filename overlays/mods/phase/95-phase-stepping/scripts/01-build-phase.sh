@@ -48,6 +48,9 @@ if [[ ! -d "$SOURCE_DIR/.git" ]]; then
   git -C "$SOURCE_DIR" checkout --detach FETCH_HEAD
 fi
 [[ "$(git -C "$SOURCE_DIR" rev-parse HEAD)" == "$SOURCE_SHA" ]]
+# CI caches only .git directories, so restore the pinned tree's files
+# (this also discards any local edits) before checking it is clean.
+git -C "$SOURCE_DIR" checkout -f -q "$SOURCE_SHA"
 git -C "$SOURCE_DIR" diff --exit-code
 "${MCU_CROSS_PREFIX}gcc" --version | grep -F '10.3.1 20210824'
 MCU_VERSION=$(python3 - "$SOURCE_DIR" "$SOURCE_SHA" <<'PY'
