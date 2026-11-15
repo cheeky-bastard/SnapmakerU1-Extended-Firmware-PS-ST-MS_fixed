@@ -3,7 +3,7 @@
 set -euo pipefail
 : "${CREATE_FIRMWARE:?Run through create_firmware.sh}"
 SOURCE_URL=https://github.com/justinh-rahb/u1-klipper.git
-SOURCE_SHA=0bf75e9047c42268f8b699fa917af9d0b4587d8a
+SOURCE_SHA=efef63d3fce9c3ac767014c1276629df3cfe7ea1
 SOURCE_DIR="$CACHE_DIR/u1-phase-$SOURCE_SHA"
 HOST_DIR="$ROOTFS_DIR/home/lava/klipper"
 SHARE_DIR="$ROOTFS_DIR/usr/local/share/phase-stepping"
