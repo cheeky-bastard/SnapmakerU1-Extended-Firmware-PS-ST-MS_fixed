@@ -118,7 +118,14 @@ PHASE_STEPPING_CALIBRATE STEPPER=stepper_x POINT=135,167,10
   Each run starts from no correction, so rerunning recalibrates from scratch.
 - `SAVE_CONFIG` stores accepted corrections. On the test printer calibration found nothing worth correcting: 2nd/4th harmonics were below noise, and the remaining vibration is a frame resonance around 55–80 Hz, which angle corrections cannot cancel.
 
-## Validation on a U1 (AT32)
+## Test printers
+
+Both U1s (AT32 mainboards) run the same non-stock TMC2240 driver tune, `tmc_autotune.cfg` from [Argolein's U1 config](https://github.com/Argolein/SnapmakerU1/blob/main/SnapmakerU1-CustomConfig/01_ArgoConfig.cfg), at the stock 1.2 A run current. While phase stepping is on it uses that tune's spreadCycle chopper settings (`TOFF 5, HSTRT 7, HEND 9, TBL 1, TPFD 2`; Klipper's defaults are `3, 5, 2, 2, 4`), which shape how the drivers regulate coil current. Its StealthChop `PWM_*` settings do nothing while phase stepping is on, because phase stepping turns StealthChop off. With stock driver settings the sound and the results may differ; that setup has not been tested.
+
+- **Printer 1:** `extended-phase`. All the testing below.
+- **Printer 2:** `extended-multiace-phase`. Calibration found and saved a small 1st-harmonic correction on X (0.6–0.9 µm down to about 0.2 µm); `SHAPER_CALIBRATE` with phase on matched its earlier phase-off result (X mzv 54.4 Hz, Y mzv 47.2 Hz).
+
+## Validation on printer 1
 
 - Single-motor tests and combined motion at 10–300 mm/s; ABS prints with travel up to 500 mm/s, accel up to 10000.
 - Homing, `M84`, T0↔T1 tool changes, `M112` and touchscreen emergency stop, print cancel.
@@ -126,7 +133,7 @@ PHASE_STEPPING_CALIBRATE STEPPER=stepper_x POINT=135,167,10
 - Sound: the speed-dependent stepper tones (1–3 kHz) disappear; overall loudness is similar. Motion feels quieter.
 - Prints: full ABS cubes with phase on and off came out the same speed; the phase-on cube's walls look smoother.
 - Input shaping: `SHAPER_CALIBRATE` with phase on and off gave the same result (X mzv 53.4 Hz, Y mzv 46.6 Hz; resonance peaks at 51 / 45 Hz within run-to-run noise). Existing shaper settings stay valid; no need to recalibrate.
-- Also built combined with multiACE and AFC. Neither touches the MCU firmware or the Klipper files phase stepping patches; those combinations have not been print-tested.
+- multiACE and AFC builds: neither mod touches the MCU firmware or the Klipper files phase stepping patches, so they combine cleanly. multiACE + phase runs on printer 2; AFC + phase has not been tested on a printer.
 
 ## Known issues
 
