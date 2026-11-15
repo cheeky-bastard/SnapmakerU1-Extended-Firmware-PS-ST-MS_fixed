@@ -68,11 +68,11 @@ PHASE_STEPPING_ENABLE STEPPER=stepper_y
 
 No end G-code is needed: phase stepping switches off when the motors are released (`M84`, idle timeout, cancel, error, emergency stop).
 
-Alternatively, `auto_enable: True` turns it on automatically after every homing.
+Alternatively, set `auto_enable: True` for both steppers. Phase stepping then turns on after every homing and comes back after each bed or nozzle probing command, so it is on for the print with no slicer change. Snapmaker's start sequence then also runs with phase stepping on, switching off for each homing or probing command and back on after it. (Before u1-klipper `efef63d`, probing turned it off for the rest of the print; see Known issues.)
 
 ### How it behaves
 
-- **Homing:** switches off for homing moves (sensorless homing and precise CoreXY homing work as stock) and comes back on when `G28` finishes.
+- **Homing and probing:** switches off for homing moves (sensorless homing and precise CoreXY homing work as stock) and comes back on when `G28` finishes. The U1's bed probe moves count as homing moves for the X/Y motors, so probing (bed mesh, bed and nozzle detection) switches it off too; it comes back on once that probing command finishes.
 - **Motors off / cancel / error:** switches off cleanly with the motors.
 - **Emergency stop:** the MCU drops phase stepping and releases the coils; `FIRMWARE_RESTART` recovers normally.
 - **Tool changes:** stays on through docking and pickup.
@@ -133,10 +133,12 @@ Both U1s (AT32 mainboards) run the same non-stock TMC2240 driver tune, `tmc_auto
 - Sound: the speed-dependent stepper tones (1–3 kHz) disappear; overall loudness is similar. Motion feels quieter.
 - Prints: full ABS cubes with phase on and off came out the same speed; the phase-on cube's walls look smoother.
 - Input shaping: `SHAPER_CALIBRATE` with phase on and off gave the same result (X mzv 53.4 Hz, Y mzv 46.6 Hz; resonance peaks at 51 / 45 Hz within run-to-run noise). Existing shaper settings stay valid; no need to recalibrate.
+- Probing resume (this release, on printer 1 with `auto_enable: True`): phase stepping was on after `G28` (which includes a Z probe) and came back on for both X and Y after a full `BED_MESH_CALIBRATE`. X reported 0 lost ticks and 0 MCU serial overruns, and no MCU link resends occurred. A full print started without the slicer lines has not been run on this build yet.
 - multiACE and AFC builds: neither mod touches the MCU firmware or the Klipper files phase stepping patches, so they combine cleanly. multiACE + phase runs on printer 2; AFC + phase has not been tested on a printer.
 
 ## Known issues
 
+- **Fixed in this release:** in earlier releases (source `0bf75e9`), Snapmaker's bed probing turned phase stepping off and nothing turned it back on, so with `auto_enable: True` alone a print ran with phase stepping off. The slicer start G-code lines were not affected.
 - One full print showed two single-message host resends to the mainboard (no CRC/sync errors, recovered immediately) where normal prints show none. Under investigation.
 - Snapmaker's touchscreen shows any G-code error (e.g. a rejected sweep) as a "System Anomaly" dialog. Klipper keeps running; dismiss it.
 - At rest, the stock X/Y hold current (1.2 A, spreadCycle) buzzes audibly. That is stock U1 behavior, not phase stepping.
