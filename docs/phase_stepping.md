@@ -133,7 +133,8 @@ Both U1s (AT32 mainboards) run the same non-stock TMC2240 driver tune, `tmc_auto
 - Sound: the speed-dependent stepper tones (1–3 kHz) disappear; overall loudness is similar. Motion feels quieter.
 - Prints: full ABS cubes with phase on and off came out the same speed; the phase-on cube's walls look smoother.
 - Input shaping: `SHAPER_CALIBRATE` with phase on and off gave the same result (X mzv 53.4 Hz, Y mzv 46.6 Hz; resonance peaks at 51 / 45 Hz within run-to-run noise). Existing shaper settings stay valid; no need to recalibrate.
-- Probing resume (this release, on printer 1 with `auto_enable: True`): phase stepping was on after `G28` (which includes a Z probe) and came back on for both X and Y after a full `BED_MESH_CALIBRATE`. X reported 0 lost ticks and 0 MCU serial overruns, and no MCU link resends occurred. A full print started without the slicer lines has not been run on this build yet.
+- Probing resume (this release, on printer 1 with `auto_enable: True`): phase stepping was on after `G28` (which includes a Z probe) and came back on for both X and Y after a full `BED_MESH_CALIBRATE`. X reported 0 lost ticks and 0 MCU serial overruns, and no MCU link resends occurred.
+- Print on printer 2 with `auto_enable: True` and no slicer lines: phase stepping switched off and on through Snapmaker's start sequence (about 3.5 minutes, longest off stretch about 1:40 during the bed prescan), was on before printing began, and stayed on through the first 5 minutes of printing (where monitoring stopped). 0 lost ticks and 0 MCU serial overruns, no MCU link resends. Before this fix that printer's prints ran with phase stepping off after the bed prescan.
 - multiACE and AFC builds: neither mod touches the MCU firmware or the Klipper files phase stepping patches, so they combine cleanly. multiACE + phase runs on printer 2; AFC + phase has not been tested on a printer.
 
 ## Known issues
