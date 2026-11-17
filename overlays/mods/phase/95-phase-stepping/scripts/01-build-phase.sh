@@ -3,7 +3,7 @@
 set -euo pipefail
 : "${CREATE_FIRMWARE:?Run through create_firmware.sh}"
 SOURCE_URL=https://github.com/justinh-rahb/u1-klipper.git
-SOURCE_SHA=ad066edefcbf3c49ba5c2d45d2bfa0495b28488c
+SOURCE_SHA=f204caa7cee926ca84b7c36b8e444dd388f347d7
 SOURCE_DIR="$CACHE_DIR/u1-phase-$SOURCE_SHA"
 HOST_DIR="$ROOTFS_DIR/home/lava/klipper"
 SHARE_DIR="$ROOTFS_DIR/usr/local/share/phase-stepping"
@@ -117,7 +117,8 @@ import hashlib,json,sys
 from pathlib import Path
 files={n:hashlib.sha256((Path(sys.argv[4])/(n+'.bin')).read_bytes()).hexdigest() for n in ['at32f403a','at32f415']}
 files['c_helper.so']=hashlib.sha256((Path(sys.argv[5])/'klippy/chelper/c_helper.so').read_bytes()).hexdigest()
-Path(sys.argv[1]).write_text(json.dumps({'source_commit':sys.argv[2],'mcu_usb_version':sys.argv[3],'phase_tick_hz':10000,'auto_enabled':False,'sha256':files},indent=2)+'\n')
+tick_hz=json.loads((Path(sys.argv[1]).parent/'mainboard.dict').read_text())['config']['PHASE_STEPPER_TICK_FREQ']
+Path(sys.argv[1]).write_text(json.dumps({'source_commit':sys.argv[2],'mcu_usb_version':sys.argv[3],'phase_tick_hz':tick_hz,'auto_enabled':False,'sha256':files},indent=2)+'\n')
 PY
 chown -R 1000:1000 "$ROOTFS_DIR/home/lava/firmware_MCU" "$HOST_DIR"
 echo ">> Phase stepping: both MCU images and matching host installed; feature remains off by default."
