@@ -135,12 +135,13 @@ Both U1s (AT32 mainboards) run the same non-stock TMC2240 driver tune, `tmc_auto
 - Input shaping: `SHAPER_CALIBRATE` with phase on and off gave the same result (X mzv 53.4 Hz, Y mzv 46.6 Hz; resonance peaks at 51 / 45 Hz within run-to-run noise). Existing shaper settings stay valid; no need to recalibrate.
 - Probing resume (this release, on printer 1 with `auto_enable: True`): phase stepping was on after `G28` (which includes a Z probe) and came back on for both X and Y after a full `BED_MESH_CALIBRATE`. X reported 0 lost ticks and 0 MCU serial overruns, and no MCU link resends occurred.
 - Print on printer 2 with `auto_enable: True` and no slicer lines: phase stepping switched off and on through Snapmaker's start sequence (about 3.5 minutes, longest off stretch about 1:40 during the bed prescan), was on before printing began, and stayed on through the first 5 minutes of printing (where monitoring stopped). 0 lost ticks and 0 MCU serial overruns, no MCU link resends. Before this fix that printer's prints ran with phase stepping off after the bed prescan.
+- Host link (u1-klipper `ad066ed`, on printer 1): with phase stepping on, XY moves and 240,000 TMC register reads in 30 minutes caused no host resends. Before the fix the same test produced one every ~94,000 reads.
 - multiACE and AFC builds: neither mod touches the MCU firmware or the Klipper files phase stepping patches, so they combine cleanly. multiACE + phase runs on printer 2; AFC + phase has not been tested on a printer.
 
 ## Known issues
 
 - **Fixed in this release:** in earlier releases (source `0bf75e9`), Snapmaker's bed probing turned phase stepping off and nothing turned it back on, so with `auto_enable: True` alone a print ran with phase stepping off. The slicer start G-code lines were not affected.
-- One full print showed two single-message host resends to the mainboard (no CRC/sync errors, recovered immediately) where normal prints show none. Under investigation.
+- **Fixed in u1-klipper `ad066ed`:** with phase stepping on, the host occasionally had to resend a message to the mainboard (about once an hour of printing; recovered within milliseconds, prints unaffected). A TMC driver command that arrived while a coil write was in flight kept interrupts off for about 11 µs, just over one serial byte, and the mainboard's UART then received one byte twice and dropped the next. Interrupts now stay off for at most about 2 µs there.
 - Snapmaker's touchscreen shows any G-code error (e.g. a rejected sweep) as a "System Anomaly" dialog. Klipper keeps running; dismiss it.
 - At rest, the stock X/Y hold current (1.2 A, spreadCycle) buzzes audibly. That is stock U1 behavior, not phase stepping.
 
