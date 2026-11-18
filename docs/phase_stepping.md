@@ -141,6 +141,7 @@ Both U1s (AT32 mainboards) run the same non-stock TMC2240 driver tune, `tmc_auto
 
 ## Known issues
 
+- **Fixed in u1-klipper `b588bd2`:** with phase stepping on, a Z-only move while X/Y were at rest could hang the Klipper host (100% CPU, no response, Mainsail stuck loading). The host code that skips ahead over long rests walked past the end of the move list. It happened only sometimes, at either tick rate. Restarting Klipper recovered it.
 - **Fixed in this release:** in earlier releases (source `0bf75e9`), Snapmaker's bed probing turned phase stepping off and nothing turned it back on, so with `auto_enable: True` alone a print ran with phase stepping off. The slicer start G-code lines were not affected.
 - **Fixed in u1-klipper `ad066ed`:** with phase stepping on, the host occasionally had to resend a message to the mainboard (about once an hour of printing; recovered within milliseconds, prints unaffected). A TMC driver command that arrived while a coil write was in flight kept interrupts off for about 11 µs, just over one serial byte, and the mainboard's UART then received one byte twice and dropped the next. Interrupts now stay off for at most about 2 µs there.
 - Snapmaker's touchscreen shows any G-code error (e.g. a rejected sweep) as a "System Anomaly" dialog. Klipper keeps running; dismiss it.
