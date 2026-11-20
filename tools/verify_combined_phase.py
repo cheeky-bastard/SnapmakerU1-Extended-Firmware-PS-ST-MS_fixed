@@ -6,9 +6,10 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 
-def verify():
+def verify(profile):
     packed = Path('tmp/calibration-verification')
     image = packed / 'rk-unpacked/rootfs.img'
     built = Path('tmp/firmware/rootfs')
@@ -16,7 +17,7 @@ def verify():
     lock = json.loads(Path('combined-source-lock.json').read_bytes())
     assert lock['justin_klipper_commit'] == expected_source
     assert lock['firmware_line'] == '2.0'
-    assert lock['profile'] == 'extended-cheeky_b52-phase'
+    variant = next(v for v in lock['variants'] if v['profile'] == profile)
     assert 'FIRMWARE_VERSION=2.0.0\n' in Path('vars.mk').read_text()
     records = []
 
@@ -27,6 +28,47 @@ def verify():
         return data
 
     share = 'usr/local/share/phase-stepping/'
+    assert read('etc/BUILD_PROFILE').decode().strip() == variant['display_name']
+    for name in ('etc/FULLVERSION', 'etc/BUILD_VERSION'):
+        version_text = read(name).decode()
+        assert variant['display_name'] in version_text
+        assert 'cheeky' not in version_text.lower()
+    if variant['afc']:
+        afc_source = json.loads(read('home/lava/AFC-Klipper-Add-On/build-source.json'))
+        assert afc_source['source_commit'] == lock['afc_source_commit']
+        assert afc_source['installer_modified_sha256'] == lock['afc_installer_modified_sha256']
+        installer = read('home/lava/AFC-Klipper-Add-On/include/U1_extended_firmware_install.sh')
+        assert hashlib.sha256(installer).hexdigest() == lock['afc_installer_modified_sha256']
+        assert b'/oem/.debug' not in installer
+        read('usr/local/sbin/afc-restore-modules')
+        read('etc/hooks/klipper.d/12-afc.sh')
+        read('usr/local/share/firmware-config/functions/26_enable_afc.yaml')
+    if variant['id'] == 'extended-multiace-phase':
+        definition = read('usr/local/share/extended-pkg/multiace')
+        assert b'PKG_VERSION="1.27b"' in definition
+        assert b'aedc432f1ca56854ae3da98e28d6a947a9b4adc2bdb88e7feb760be472968556' in definition
+        for name in ('usr/local/sbin/multiace-control', 'usr/local/share/multiace/common.sh',
+                     'etc/hooks/klipper.d/10-multiace.sh'):
+            read(name)
+    if not variant['phase']:
+        for name in ('at32f403a.bin', 'at32f415.bin', 'MCU_DESC'):
+            data = (packed / name).read_bytes()
+            assert data == (Path('tools/tmp/test') / name).read_bytes(), name
+            records.append(hashlib.sha256(data).hexdigest() + '  updater/' + name)
+        for name in ('klippy/toolhead.py', 'klippy/chelper/__init__.py'):
+            data = read('home/lava/klipper/' + name)
+            assert b'def register_flush_callback(' not in data
+            assert b'defs_phasegen' not in data
+        listing = subprocess.check_output(['unsquashfs', '-ll', str(image)]).decode()
+        assert '/usr/local/share/phase-stepping/' not in listing
+        assert '/klippy/extras/phase_stepping.py' not in listing
+        Path('firmware/phase-build.json').write_text(json.dumps({
+            'profile': profile, 'included': False, 'auto_enabled': False,
+            'mcu_payloads': 'stock byte-identical',
+        }, indent=2) + '\n')
+        Path('firmware/phase-payload-sha256.txt').write_text('\n'.join(records) + '\n')
+        print('Non-phase variant: stock AT32 MCU payloads and descriptor preserved; phase host/config absent')
+        return
     metadata_bytes = read(share + 'build.json')
     metadata = json.loads(metadata_bytes)
     assert metadata['source_commit'] == expected_source
@@ -69,4 +111,4 @@ def verify():
 
 
 if __name__ == '__main__':
-    verify()
+    verify(sys.argv[1])

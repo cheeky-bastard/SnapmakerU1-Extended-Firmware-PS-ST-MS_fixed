@@ -1,5 +1,14 @@
 # Combined package change record
 
+## 0.1.0-dev2 — 2026-11-19
+
+- Mirror Justin's four feature variants: Extended without phase, Extended + phase, multiACE + phase, and AFC + phase. Our calibration/nozzle fixes are present in every variant.
+- Use a four-job CI matrix, preserving calibration and exact native/CFG checks per image. Publish only after all four pass; provide four checksum pairs and per-variant verification ZIPs in one release.
+- Preserve stock AT32 images/descriptor and omit phase host support in the non-phase image. Retain phase helper/MCU pairing verification for the other three.
+- Permit AFC's existing one-line invalid-extruder-name error-to-warning patch only in the AFC variant, as authorized. Check its exact final `extruder.py` hash and full-file delta while retaining all calibration methods unchanged. Original native/mod source guards remain in force before AFC is applied.
+- Pin AFCProject source to `5ea84ea6fab75b9b49db090f309154d1e52272bb` rather than following mutable main. Retain all upstream setup/activation defaults and Justin's phase guide unchanged. The multiACE provider remains pinned by Paxx's package definition.
+- Update the README feature table, combined instructions and source lock. 2.0 remains separate from 2.1. Hardware acceptance remains pending for each combination.
+
 ## 0.1.0-dev1 — 2026-11-19
 
 - Imported Justin's `feat/u1-phase-stepping` at `e64c63669b8f6802871147561f4a1d9d7c94ab10`, rather than the old 1.5.2 `develop` initially copied by GitHub. His six phase-specific files, including `docs/phase_stepping.md`, are retained unchanged.
@@ -14,3 +23,7 @@ The [first combined CI run](https://github.com/cheeky-bastard/SnapmakerU1-Extend
 Build source: `c9674669031cd2392bbaeccdcac6d9d1d153d42c`. Image SHA-256: `0ed19c8f00ea369e57fbe6d9be85f107b1f1df243e2c7d580a6071a44ecb0fd2`.
 
 Automated build results belong to that exact source commit and its attached records. Justin's earlier phase tests and our earlier calibration tests are retained as historical evidence; combined-image hardware acceptance is pending. No printer was changed during this integration.
+
+AFC normal persistence: the pinned upstream installer normally writes a debug flag. This fork replaces only that function with a guarded no-op and uses Paxx's Klipper startup-hook mechanism to restore AFC module links while its saved config include is active. Debug mode remains disabled. The installer adaptation and link restore are checked separately from the native calibration code.
+
+Visible naming: boot artwork, `/etc/BUILD_PROFILE`, version strings and download filenames use feature-based names (`extended-PhaseStep-STC-MS`, with optional multiACE/AFC). Internal legacy overlay paths remain stable for compatibility. Packed-image checks verify all four displayed identities.

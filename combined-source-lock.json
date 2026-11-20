@@ -1,15 +1,53 @@
 {
-  "package_version": "0.1.0-dev1",
+  "package_version": "0.1.0-dev2",
   "updated": "2026-11-19",
   "firmware_line": "2.0",
   "stock_firmware": "2.0.0.205",
-  "profile": "extended-cheeky_b52-phase",
   "paxx_2_0_commit": "2c80e3dc495fdf724bc53c5c35c875010ee1668f",
   "calibration_build_commit": "3953fdb6748fa80b278f42ff1456de18abe379c4",
   "calibration_docs_commit": "a8efd8f02ccc2911a2eb7ca5d3b09b59837d28a8",
   "justin_firmware_commit": "e64c63669b8f6802871147561f4a1d9d7c94ab10",
   "justin_klipper_commit": "8825a2c8b547913e80aed9bce1e9021f9de38594",
   "phase_auto_enabled": false,
-  "required_mainboard": "AT32",
-  "update_policy": "Stay on stock 2.0.0.205; review compatible fixes explicitly. Never auto-merge Paxx develop 2.1."
+  "required_mainboard": "AT32 for phase variants; non-phase uses stock MCU payloads",
+  "update_policy": "Stay on stock 2.0.0.205; review compatible fixes explicitly. Never auto-merge Paxx develop 2.1.",
+  "variants": [
+    {
+      "id": "extended",
+      "profile": "extended-cheeky_b52",
+      "phase": false,
+      "afc": false,
+      "image": "U1_extended-STC-MS_2.0_upgrade.bin",
+      "display_name": "extended-STC-MS"
+    },
+    {
+      "id": "extended-phase",
+      "profile": "extended-cheeky_b52-phase",
+      "phase": true,
+      "afc": false,
+      "image": "U1_extended-PhaseStep-STC-MS_2.0_upgrade.bin",
+      "display_name": "extended-PhaseStep-STC-MS"
+    },
+    {
+      "id": "extended-multiace-phase",
+      "profile": "extended-cheeky_b52-multiace-phase",
+      "phase": true,
+      "afc": false,
+      "image": "U1_extended-multiACE-PhaseStep-STC-MS_2.0_upgrade.bin",
+      "display_name": "extended-multiACE-PhaseStep-STC-MS"
+    },
+    {
+      "id": "extended-afc-phase",
+      "profile": "extended-cheeky_b52-afc-phase",
+      "phase": true,
+      "afc": true,
+      "image": "U1_extended-AFC-PhaseStep-STC-MS_2.0_upgrade.bin",
+      "display_name": "extended-AFC-PhaseStep-STC-MS"
+    }
+  ],
+  "afc_source_commit": "5ea84ea6fab75b9b49db090f309154d1e52272bb",
+  "afc_extruder_sha256": "4761c3681881ae98fc2ff4d1777d7fe9f788331e681cc1965915d469cef30296",
+  "afc_installer_baseline_sha256": "39c4c793b8ee3e9a6eafcd78e83ce246c64265c3dbb8993ed4b1fa4c54f19d6d",
+  "afc_installer_modified_sha256": "c6f8a27832638d12cce676da75649975f1523b95bbaee9230193a79888d96d21",
+  "afc_persistence": "Normal Paxx startup hook, no debug persistence"
 }

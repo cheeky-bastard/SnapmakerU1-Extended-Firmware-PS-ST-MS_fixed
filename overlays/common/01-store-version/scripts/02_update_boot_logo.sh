@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-PackageHomePage: https://github.com/paxx12-snapmaker-u1/SnapmakerU1-Extended-Firmware
 # SPDX-FileCopyrightText: Copyright (c) 2026 @paxx12, @liberodark
+# Modified 2026-11-19 by cheeky-bastard: optional feature-based display label.
 
 set -e
 
@@ -24,6 +25,8 @@ boot_fit.sh extract "$BOOT_IMG" "$UNPACK_DIR"
 
 PROFILE_STR="custom"
 [[ -n "$PROFILE" ]] && PROFILE_STR="$PROFILE"
+[[ -n "${PROFILE_LABEL:-}" ]] && PROFILE_STR="$PROFILE_LABEL"
+echo ">> Boot profile label: $PROFILE_STR"
 
 VERSION_STR="$(git describe --abbrev --always)"
 [[ "$GIT_VERSION" != *"-$VERSION_STR" ]] && [[ -n "$GIT_VERSION" ]] && VERSION_STR="$GIT_VERSION-$VERSION_STR"

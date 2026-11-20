@@ -1,0 +1,36 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright (c) 2026 cheeky-bastard
+# Restore only AFC's ephemeral module links; normal printer config persists.
+set -eu
+afc_lava_root="${AFC_RESTORE_ROOT:-/home/lava}"
+afc_module_source="$afc_lava_root/AFC-Klipper-Add-On/extras"
+afc_module_target="$afc_lava_root/klipper/klippy/extras"
+afc_printer_config="$afc_lava_root/printer_data/config/printer.cfg"
+if ! grep -Eq '^[[:space:]]*\[include[[:space:]]+AFC/\*\.cfg\][[:space:]]*(#.*)?$' "$afc_printer_config"; then
+    exit 0
+fi
+test -d "$afc_module_source"
+test -d "$afc_module_target"
+# Preflight every source before replacing any link. Calibration/nozzle modules
+# and the package initializer are never replaced by this integration.
+for afc_extension in "$afc_module_source"/*.py; do
+    test -f "$afc_extension"
+    afc_name="${afc_extension##*/}"
+    case "$afc_name" in
+        extruder_config_bak.py|probe_inductance_coil.py|print_task_config.py|queuefile.py)
+            echo "AFC extension conflicts with a protected native module: $afc_name" >&2
+            exit 1
+            ;;
+    esac
+done
+for afc_name in AFC.py AFC_unit.py AFC_lane.py; do
+    if [ -f "$afc_module_target/$afc_name" ] && [ ! -L "$afc_module_target/$afc_name" ] && [ ! -e "$afc_module_target/$afc_name.lite" ]; then
+        cp -p "$afc_module_target/$afc_name" "$afc_module_target/$afc_name.lite"
+    fi
+done
+for afc_extension in "$afc_module_source"/*.py; do
+    afc_name="${afc_extension##*/}"
+    [ "$afc_name" = __init__.py ] && continue
+    ln -sf "$afc_extension" "$afc_module_target/$afc_name"
+done

@@ -1,7 +1,7 @@
 # Restored 2026-11-14; current maintainer: cheeky-bastard
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2026 cheekyb52
-name: Build combined phase + calibration firmware 2.0
+name: Build four combined firmware variants 2.0
 
 on:
   push:
@@ -19,9 +19,31 @@ concurrency:
 jobs:
   build:
     if: github.repository == 'cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: extended
+            profile: extended-cheeky_b52
+            label: extended-STC-MS
+            image: U1_extended-STC-MS_2.0_upgrade.bin
+          - id: extended-phase
+            profile: extended-cheeky_b52-phase
+            label: extended-PhaseStep-STC-MS
+            image: U1_extended-PhaseStep-STC-MS_2.0_upgrade.bin
+          - id: extended-multiace-phase
+            profile: extended-cheeky_b52-multiace-phase
+            label: extended-multiACE-PhaseStep-STC-MS
+            image: U1_extended-multiACE-PhaseStep-STC-MS_2.0_upgrade.bin
+          - id: extended-afc-phase
+            profile: extended-cheeky_b52-afc-phase
+            label: extended-AFC-PhaseStep-STC-MS
+            image: U1_extended-AFC-PhaseStep-STC-MS_2.0_upgrade.bin
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 90
     env:
+      BUILD_PROFILE: ${{ matrix.profile }}
+      DOCKER_OPTS: '-e BUILD_PROFILE'
       CI: '1'
     steps:
       - name: Checkout source and submodules
@@ -48,7 +70,7 @@ jobs:
           set -euo pipefail
           cat vars.mk >> "$GITHUB_ENV"
           base_version=$(sed -n 's/^FIRMWARE_VERSION=//p' vars.mk)
-          echo "GIT_VERSION=${base_version}-cheeky-bastard-phase-ST-MS-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+          echo "GIT_VERSION=${base_version}-${{ matrix.label }}-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
 
       - name: Restore original firmware download
         uses: actions/cache@v4
@@ -76,7 +98,7 @@ jobs:
           import json,pathlib
           lock = json.loads(pathlib.Path("combined-source-lock.json").read_bytes())
           assert lock["firmware_line"] == "2.0"
-          assert lock["profile"] == "extended-cheeky_b52-phase"
+          assert __import__("os").environ["BUILD_PROFILE"] in {v["profile"] for v in lock["variants"]}
           assert "FIRMWARE_VERSION=2.0.0\n" in pathlib.Path("vars.mk").read_text()
           assert lock["phase_auto_enabled"] is False
           assert lock["justin_klipper_commit"] == "8825a2c8b547913e80aed9bce1e9021f9de38594"
@@ -95,6 +117,14 @@ jobs:
       - name: Build tools
         run: ./dev.sh make tools
 
+      - name: Verify multiACE configuration sanitizer
+        if: matrix.id == 'extended-multiace-phase'
+        run: sh overlays/mods/multiace/70-app-multiace/test_multiace_config_sanitizer.sh
+
+      - name: Verify AFC normal persistence and collision protection
+        if: matrix.id == 'extended-afc-phase'
+        run: python3 -B tools/test_afc_persistence.py
+
       - name: Download and verify original firmware
         run: ./dev.sh make firmware
 
@@ -102,7 +132,7 @@ jobs:
         run: ./dev.sh make test
 
       - name: Build extended firmware with calibration usermod
-        run: ./dev.sh make build PROFILE=extended-cheeky_b52-phase OUTPUT_FILE=firmware/U1_phase_ST_MS_2.0.bin
+        run: ./dev.sh make build PROFILE=${{ matrix.profile }} PROFILE_LABEL=${{ matrix.label }} OUTPUT_FILE=firmware/${{ matrix.image }}
 
       - name: Check out pinned calibration regression sources
         uses: actions/checkout@v4
@@ -120,7 +150,13 @@ jobs:
           fixture = pathlib.Path("regression-source/tests/native/pr760/modified")
           actual = pathlib.Path("tmp/firmware/rootfs/home/lava/klipper")
           for relative in ("klippy/kinematics/extruder.py", "klippy/extras/extruder_config_bak.py", "klippy/extras/probe_inductance_coil.py"):
-              assert (actual / relative).read_bytes() == (fixture / relative).read_bytes(), relative
+              expected = (fixture / relative).read_bytes()
+              if "-afc-" in os.environ["BUILD_PROFILE"] and relative.endswith("kinematics/extruder.py"):
+                  old = b'            raise ValueError("Invalid extruder name")'
+                  new = b'            logging.warning(f"Extruder index not found for {extruder_name}")'
+                  assert expected.count(old) == 1
+                  expected = expected.replace(old, new)
+              assert (actual / relative).read_bytes() == expected, relative
           macro = pathlib.Path("tmp/firmware/rootfs/usr/local/share/firmware-config/extended/klipper/70_tool_offsets.cfg")
           assert macro.read_bytes() == pathlib.Path("regression-source/overlays/mods/tooloffsets/02-macros/root/usr/local/share/firmware-config/extended/klipper/70_tool_offsets.cfg").read_bytes()
           os.environ["U1_CALIBRATION_PROFILE"] = "paxx-2.0-pr760"
@@ -128,11 +164,11 @@ jobs:
           suite = unittest.defaultTestLoader.loadTestsFromNames(["tests.native.test_native", "tests.test_macros", "tests.test_profiles"])
           result = unittest.TextTestRunner(verbosity=1).run(suite)
           assert result.wasSuccessful() and result.testsRun == 64
-          print("All 64 calibration regressions passed against byte-matched 2.0 payloads")
+          print("All 64 calibration regressions passed; actual native payload matches with only the permitted AFC warning delta where applicable")
           PY
 
       - name: Unpack generated firmware
-        run: ./dev.sh scripts/helpers/unpack_firmware.sh "$PWD/firmware/U1_phase_ST_MS_2.0.bin" "$PWD/tmp/calibration-verification"
+        run: ./dev.sh scripts/helpers/unpack_firmware.sh "$PWD/firmware/${{ matrix.image }}" "$PWD/tmp/calibration-verification"
 
       - name: Verify six files from the packed image
         shell: bash
@@ -147,6 +183,9 @@ jobs:
               "home/lava/klipper/klippy/queuefile.py": "fce61a3256e376b566b8676c8b95f9c3082846881995af8cb0369af581938157",
               "usr/local/share/firmware-config/extended/klipper/70_tool_offsets.cfg": "ea4733329ae5575a5b42d26284f8d79178f5153bdb2cbe832907df749625cde0",
           }
+          lock = __import__("json").loads(pathlib.Path("combined-source-lock.json").read_bytes())
+          if "-afc-" in __import__("os").environ["BUILD_PROFILE"]:
+              expected["home/lava/klipper/klippy/kinematics/extruder.py"] = lock["afc_extruder_sha256"]
           original = pathlib.Path("tools/tmp/test")
           packed = pathlib.Path("tmp/calibration-verification")
           for name in ("UPFILE_MAGIC_VER", "UPFILE_EXT", "gd32h757.bin"):
@@ -167,15 +206,15 @@ jobs:
           '
 
       - name: Verify packed phase MCU and host pairing
-        run: ./dev.sh python3 -B tools/verify_combined_phase.py
+        run: ./dev.sh python3 -B tools/verify_combined_phase.py "$BUILD_PROFILE"
 
       - name: Record firmware checksum and build identity
         shell: bash
         run: |
           ./dev.sh bash -euo pipefail -c '
           cd firmware
-          sha256sum U1_phase_ST_MS_2.0.bin > U1_phase_ST_MS_2.0.bin.sha256
-          printf "profile=extended-cheeky_b52-phase\nsource_commit=%s\nversion=%s\n" "$(git rev-parse HEAD)" "$GIT_VERSION" > build-info.txt
+          sha256sum ${{ matrix.image }} > ${{ matrix.image }}.sha256
+          printf "profile=%s\nsource_commit=%s\nversion=%s\n" "$BUILD_PROFILE" "$(git rev-parse HEAD)" "$GIT_VERSION" > build-info.txt
           cp ../docs/combined_package.md TESTING.md
           cp ../docs/phase_stepping.md PHASE_STEPPING.md
           cp ../docs/single_tool_calibration.md WORK_INSTRUCTIONS.md
@@ -188,12 +227,12 @@ jobs:
       - name: Upload firmware and verification records
         uses: actions/upload-artifact@v4
         with:
-          name: combined-phase-calibration-${{ github.run_number }}-${{ github.run_attempt }}
+          name: combined-four-${{ matrix.id }}-${{ github.run_number }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 14
           path: |
-            firmware/U1_phase_ST_MS_2.0.bin
-            firmware/U1_phase_ST_MS_2.0.bin.sha256
+            firmware/${{ matrix.image }}
+            firmware/${{ matrix.image }}.sha256
             firmware/payload-sha256.txt
             firmware/build-info.txt
             firmware/TESTING.md
@@ -207,7 +246,7 @@ jobs:
             firmware/phase-payload-sha256.txt
 
   publish:
-    name: Publish experimental test build
+    name: Publish all four verified variants
     needs: build
     if: github.repository == 'cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed'
     runs-on: ubuntu-24.04-arm
@@ -215,55 +254,44 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download verified build assets
+      - name: Checkout release assembly source
+        uses: actions/checkout@v4
+
+      - name: Download the four verified artifacts
         uses: actions/download-artifact@v4
         with:
-          name: combined-phase-calibration-${{ github.run_number }}-${{ github.run_attempt }}
-          path: release-assets
+          pattern: combined-four-*-${{ github.run_number }}-${{ github.run_attempt }}
+          path: release-input
+          merge-multiple: false
 
-      - name: Check downloaded firmware checksum
-        working-directory: release-assets
-        run: sha256sum --check U1_phase_ST_MS_2.0.bin.sha256
+      - name: Verify and assemble all four downloads
+        run: python3 -B tools/assemble_variant_release.py release-input release-assets
 
-      - name: Publish personal testing prerelease
-        shell: bash
+      - name: Publish personal four-variant prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed
         run: |
           set -euo pipefail
-          tag="phase-ST-MS-2.0-test-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
-          notes_file="$RUNNER_TEMP/calibration-release-notes.md"
+          tag="ST-MS-2.0-four-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          notes_file="$RUNNER_TEMP/four-variant-release.md"
           cat > "$notes_file" <<'NOTES'
-          Experimental combined firmware on stock U1 2.0.0.205: Justin's phase stepping, independent T1/T2/T3 calibration and the guarded mixed-nozzle print-start fix.
+          Four experimental builds on stock U1 2.0.0.205. Every build includes independent T1/T2/T3 calibration and the guarded mixed-nozzle print-start fix.
 
-          Source pins and maintenance policy are attached in combined-source-lock.json. This stays on the reviewed Paxx 2.0 line; Paxx develop 2.1 is not merged. Justin's phase source is pinned to u1-klipper 8825a2c8b547913e80aed9bce1e9021f9de38594.
+          | File | Contents |
+          | --- | --- |
+          | U1_extended-STC-MS_2.0_upgrade.bin | Extended + our fixes; no phase stepping |
+          | U1_extended-PhaseStep-STC-MS_2.0_upgrade.bin | Extended + our fixes + phase stepping |
+          | U1_extended-multiACE-PhaseStep-STC-MS_2.0_upgrade.bin | Extended + our fixes + multiACE + phase stepping |
+          | U1_extended-AFC-PhaseStep-STC-MS_2.0_upgrade.bin | Extended + our fixes + AFC + phase stepping |
 
-          IMPORTANT: AT32 mainboard only, as described in Justin's unchanged PHASE_STEPPING.md. This image flashes rebuilt mainboard and toolhead MCU payloads with a matched USB version and recovery hashes. Phase stepping is off until configured; pre-existing phase.cfg can still enable it. No driver tuning or phase configuration is enabled automatically.
+          Phase variants require an AT32 mainboard and remain off until configured. The non-phase build retains stock MCU binaries; remove existing phase-only configuration before switching to it. AFC and multiACE retain their upstream setup/activation procedures; inclusion does not configure external hardware automatically.
 
-          Press CALIBRATE_TOOL_1/2/3 directly to clean and save only that tool. T0 directs the operator to stock full calibration. CLEAN_AND_VALIDATE_OFFSETS saves nothing. Keep actual nozzle sizes correct in the printer and slicer; the faulty print-start diameter comparison is bypassed while volume/material checks remain active.
+          All four must pass 64 calibration regressions, eight actual nozzle checks, six packed native/config checks and container round trips before this release can publish. Phase variants additionally verify target-image helper loading and packed MCU/host/recovery pairing. The non-phase build verifies unchanged stock MCU payloads and absence of phase host support. The AFC variant permits only the existing one-line extruder-name error-to-warning change outside calibration logic; its exact final hash is separately checked. AFC source is pinned in combined-source-lock.json.
 
-          CI verifies original-container round trips, 64 calibration regressions against actual byte-matched payloads, eight actual nozzle-validation checks during the build, six packed native/config hashes, target-image phase helper loading and packed phase MCU/host/recovery pairing. This does not establish hardware acceptance of the combined image.
-
-          Read TESTING.md, PHASE_STEPPING.md and WORK_INSTRUCTIONS.md before use. Verify the attached SHA-256, obtain verified configuration/calibration/native backups and keep the known-good 2.0 image for rollback. Remove phase-only configuration before reverting to firmware without phase support. Use normal operation without debug/factory mode. Wider community testing remains pending and no upstream PR is submitted.
+          Justin's unchanged guide is PHASE_STEPPING.md; WORK_INSTRUCTIONS.md covers our macro buttons and Mainsail grouping. Read TESTING.md, verify the chosen image checksum and obtain verified configuration/calibration/native backups before installing. Each variant has its own verification ZIP and release-index entry. Hardware acceptance of these combinations is pending. No debug/factory mode or upstream PR is involved; 2.1 remains separate.
           NOTES
-          printf '\nBuild source commit: `%s`\n' "$GITHUB_SHA" >> "$notes_file"
-          gh release create "$tag" \
-            release-assets/U1_phase_ST_MS_2.0.bin \
-            release-assets/U1_phase_ST_MS_2.0.bin.sha256 \
-            release-assets/payload-sha256.txt \
-            release-assets/build-info.txt \
-            release-assets/TESTING.md \
-            release-assets/NOTICE.md \
-            release-assets/LICENSE \
-            release-assets/70_tool_offsets.cfg \
-            release-assets/PHASE_STEPPING.md \
-            release-assets/WORK_INSTRUCTIONS.md \
-            release-assets/combined-source-lock.json \
-            release-assets/phase-build.json \
-            release-assets/phase-payload-sha256.txt \
-            --repo "$GH_REPO" \
-            --target "$GITHUB_SHA" \
-            --title "Firmware 2.0: phase stepping + single-tool calibration + mixed nozzles — experimental ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" \
-            --notes-file "$notes_file" \
-            --prerelease --latest=false
+          printf '\nBuild source: `%s`\n' "$GITHUB_SHA" >> "$notes_file"
+          gh release create "$tag" release-assets/* --repo "$GH_REPO" --target "$GITHUB_SHA" \
+            --title "Firmware 2.0: four variants + single-tool calibration + mixed nozzles — experimental ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" \
+            --notes-file "$notes_file" --prerelease --latest=false

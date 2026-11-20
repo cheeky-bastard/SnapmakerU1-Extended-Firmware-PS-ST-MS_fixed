@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-PackageHomePage: https://github.com/paxx12-snapmaker-u1/SnapmakerU1-Extended-Firmware
 # SPDX-FileCopyrightText: Copyright (c) 2025 @paxx12
+# Modified 2026-11-19 by cheeky-bastard: optional feature-based display label.
 
 if [[ -z "$CREATE_FIRMWARE" ]]; then
   echo "Error: This script should be run within the create_firmware.sh environment."
@@ -28,5 +29,5 @@ else
 fi
 
 if [[ -n "$PROFILE" ]]; then
-  echo "$PROFILE" > "$ROOTFS_DIR/etc/BUILD_PROFILE"
+  echo "${PROFILE_LABEL:-$PROFILE}" > "$ROOTFS_DIR/etc/BUILD_PROFILE"
 fi
