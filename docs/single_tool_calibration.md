@@ -4,11 +4,11 @@ title: Single-Tool Calibration Work Instructions
 
 # Single-Tool Calibration Work Instructions
 
-**Package: 0.1.0-dev2 | Native: 0.2.0-dev1 | CFG: 0.1.1 | Updated: 2026-11-19**
+**Package: 0.1.0-dev3 | Native: 0.2.0-dev1 | CFG: 0.1.1 | Updated: 2026-11-19**
 
 Reused from our [maintained calibration project's work instructions](https://github.com/cheeky-bastard/Snapmaker-U1-Single-Tool-Calibration/blob/a8efd8f02ccc2911a2eb7ca5d3b09b59837d28a8/docs/work-instructions.md), with historical multi-version release sections omitted and companion links resolved. Runtime macros and native calibration patches are unchanged.
 
-For this combined 2.0 firmware, read [combined installation/testing](combined_package.md) and [Justin's unchanged phase-stepping guide](phase_stepping.md) as well. During initial acceptance, test calibration with phase stepping off first, then test the interaction after following Justin's enablement checks. Use [this repository's builds](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases) for the combined image.
+For this combined 2.0 firmware, read [combined installation/testing](combined_package.md) and [Justin's phase-stepping guide with bundled-config setup](phase_stepping.md) as well. During initial acceptance, test calibration with phase stepping off first, then test the interaction after following Justin's enablement checks. Use [this repository's builds](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases) for the combined image.
 
 ## Mainsail macro group
 

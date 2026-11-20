@@ -62,6 +62,8 @@ def verify(profile):
         listing = subprocess.check_output(['unsquashfs', '-ll', str(image)]).decode()
         assert '/usr/local/share/phase-stepping/' not in listing
         assert '/klippy/extras/phase_stepping.py' not in listing
+        assert '/extended/klipper/71_phase.cfg' not in listing
+        assert '/etc/init.d/S49phase-config' not in listing
         Path('firmware/phase-build.json').write_text(json.dumps({
             'profile': profile, 'included': False, 'auto_enabled': False,
             'mcu_payloads': 'stock byte-identical',
@@ -69,6 +71,19 @@ def verify(profile):
         Path('firmware/phase-payload-sha256.txt').write_text('\n'.join(records) + '\n')
         print('Non-phase variant: stock AT32 MCU payloads and descriptor preserved; phase host/config absent')
         return
+    bundled = read('usr/local/share/firmware-config/extended/klipper/71_phase.cfg')
+    assert hashlib.sha256(bundled).hexdigest() == lock['bundled_phase_cfg']['sha256']
+    read('etc/init.d/S49phase-config')
+    import configparser
+    cfg = configparser.RawConfigParser()
+    cfg.read_string(bundled.decode())
+    for axis in ('x', 'y'):
+        assert cfg.getboolean('phase_stepping stepper_' + axis, 'auto_enable') is False
+    assert cfg.has_section('gcode_macro PHASE_CALIBRATE_XY')
+    stock_config = read('home/lava/origin_printer_data/config/printer.cfg').decode()
+    assert '[lis2dw e0_lis2dw]' in stock_config
+    cleanup = read('usr/local/share/firmware-config/force-cleanup.sha256').decode()
+    assert lock['bundled_phase_cfg']['sha256'] + '  klipper/71_phase.cfg' in cleanup.splitlines()
     metadata_bytes = read(share + 'build.json')
     metadata = json.loads(metadata_bytes)
     assert metadata['source_commit'] == expected_source
@@ -107,7 +122,7 @@ def verify(profile):
     read('home/lava/klipper/scripts/graph_motor_harmonics.py')
     Path('firmware/phase-build.json').write_bytes(metadata_bytes)
     Path('firmware/phase-payload-sha256.txt').write_text('\n'.join(sorted(set(records))) + '\n')
-    print('Packed phase metadata, 20 kHz source pin, paired updater/recovery MCUs, recovery hashes and host payload verified')
+    print('Packed phase metadata, paired updater/recovery MCUs, host payload and disabled bundled 71_phase.cfg verified')
 
 
 if __name__ == '__main__':

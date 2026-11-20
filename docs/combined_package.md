@@ -1,8 +1,8 @@
 # Combined 2.0 package: installation and acceptance
 
-**Package: 0.1.0-dev2 | Updated: 2026-11-19**
+**Package: 0.1.0-dev3 | Updated: 2026-11-19**
 
-Read [Justin's complete instructions](phase_stepping.md) and [calibration work instructions](single_tool_calibration.md). Justin's guide is unchanged; its original four-way feature split is now also offered here, with our calibration and mixed-nozzle fixes in **every** image. See the [download table](../README.md#choose-a-build).
+Read [Justin's complete instructions](phase_stepping.md) and [calibration work instructions](single_tool_calibration.md). Justin's guide retains his testing instructions; its manual CFG creation steps now use our bundled default. His original four-way feature split is now also offered here, with our calibration and mixed-nozzle fixes in **every** image. See the [download table](../README.md#choose-a-build).
 
 | Variant | Build profile (internal) |
 | --- | --- |
@@ -13,16 +13,28 @@ Read [Justin's complete instructions](phase_stepping.md) and [calibration work i
 
 ## Before installing
 
-The three phase variants are for the **AT32 U1 mainboard** described in Justin's guide. Confirm that requirement before flashing. Phase stepping rebuilds the mainboard and toolhead MCU images with a matching USB version and recovery hashes; flashing this combined image updates those MCUs too. The non-phase Extended variant instead keeps the stock MCU binaries and omits the phase host modules. No phase configuration is installed into auto-included directories, and this package adds no automatic phase enablement or driver tuning. Existing phase configuration from an earlier installation can still enable phase stepping; inspect it before flashing.
+The three phase variants are for the **AT32 U1 mainboard** described in Justin's guide. Confirm that requirement before flashing. Phase stepping rebuilds the mainboard and toolhead MCU images with a matching USB version and recovery hashes; flashing this combined image updates those MCUs too. The non-phase Extended variant instead keeps the stock MCU binaries and omits the phase host modules. The phase variants install `71_phase.cfg` through the same default-copy mechanism as `70_tool_offsets.cfg`. Both `auto_enable` values remain `False`: commands and the calibration button are registered, without automatic phase motion or driver tuning. Existing phase configuration from an earlier installation can still enable phase stepping; inspect it before flashing.
 
 With the printer idle and no paused or active virtual-SD job, obtain and verify a timestamped local backup of configuration, saved calibration, existing phase settings and relevant native files outside the config root. Preserve originals. Have the previously working 2.0 firmware image available. Use normal operation without debug/factory mode. See the [calibration backup procedure](https://github.com/cheeky-bastard/Snapmaker-U1-Single-Tool-Calibration/blob/a8efd8f02ccc2911a2eb7ca5d3b09b59837d28a8/docs/installation.md#back-up-the-target).
+
+## Bundled phase config and upgrades
+
+Fresh phase installations receive `extended/klipper/71_phase.cfg` automatically alongside `70_tool_offsets.cfg`. This registers the X/Y phase commands and **PHASE_CALIBRATE_XY** button; phase stepping remains off because both `auto_enable` values are `False`. No macro runs or calibration corrections are saved during boot. Add the phase-calibration button to a Mainsail macro group if desired.
+
+Keep T0's accelerometer configuration accurate. The supplied calibration section names `lis2dw e0_lis2dw`; verify that this is the correct physical sensor before using phase calibration. A different sensor requires adapting that setting, not changing tool offsets.
+
+Paxx preserves a customized `71_phase.cfg` and offers the packaged version as `.default`. If another auto-included `extended/klipper/*.cfg` file or `printer.cfg` already defines overlapping phase sections, a newly copied unmodified default is moved to `71_phase.cfg.default`; existing settings remain in use. Review and consolidate those files once, with verified backups. This guard does not follow arbitrary custom include chains outside those locations, so inspect custom includes too. Do not duplicate `[phase_stepping]`, `[phase_calibrate]` or the calibration macro.
+
+Unmodified packaged defaults are refreshed through the stock checksum-cleanup mechanism. That also removes this exact unmodified CFG when switching to the non-phase image. Customized phase files, other filenames and phase sections/corrections in `SAVE_CONFIG` are preserved: remove or disable those explicitly before flashing a firmware without phase support. No custom phase settings or saved corrections are silently erased.
+
+The standalone `71_phase.cfg` release asset is for phase-capable images only; it cannot add phase MCU/host support to the non-phase image.
 
 ## Install and test in stages
 
 1. Choose the correct variant and download its `.bin` and its `.sha256` record from the same release; verify SHA-256 locally. Flash through the normal local-update process in Justin's guide.
 2. Verify startup, firmware identity, MCU connection and retained tool offsets. Keep phase stepping disabled for the first baseline checks. Compare any persisted custom macro CFG with the packaged CFG 0.1.1; customized files can survive upgrades and receive a `.default` copy.
 3. Test the T0 warning and waiting-cycle abort. Run a selected T1/T2/T3 calibration with an unchanged reference. Confirm the selected save, unchanged other tools and persistence after a normal restart. Clean/validate must leave saved calibration unchanged. Follow the work instructions for every manual confirmation.
-4. For a phase variant, follow Justin's AT32 checks, manual low-speed phase tests and enable/disable procedure. His guide documents both explicit slicer enablement and optional `auto_enable`; neither is added by this package.
+4. For a phase variant, follow Justin's AT32 checks, manual low-speed phase tests and enable/disable procedure. Skip hand-creating the CFG: it is bundled. His explicit slicer enablement and optional `auto_enable: True` remain choices after the motion tests; neither is enabled by this package.
 5. With phase stepping enabled, verify calibration/probing and return-to-phase behavior, all four tool changes, a representative print and mixed-nozzle print-start behavior. Review phase lost ticks/link counters and saved-offset invariants. Use accurate nozzle sizes and suitable materials/temperatures. Individual upstream test results do not prove this combination.
 
 The combined image requires printer acceptance even after all automated checks pass. Never treat an abort as an undo of a completed save or as a guaranteed immediate interrupt of queued probing.

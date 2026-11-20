@@ -166,6 +166,7 @@ jobs:
           assert result.wasSuccessful() and result.testsRun == 64
           print("All 64 calibration regressions passed; actual native payload matches with only the permitted AFC warning delta where applicable")
           PY
+          "$RUNNER_TEMP/calibration-tests/bin/python" -B tools/test_bundled_phase.py
 
       - name: Unpack generated firmware
         run: ./dev.sh scripts/helpers/unpack_firmware.sh "$PWD/firmware/${{ matrix.image }}" "$PWD/tmp/calibration-verification"
@@ -222,6 +223,9 @@ jobs:
           cat ../NOTICE.combined.md ../overlays/mods/cheeky_b52/NOTICE.md > NOTICE.md
           cp ../LICENSE LICENSE
           cp ../overlays/mods/cheeky_b52/02-macros/root/usr/local/share/firmware-config/extended/klipper/70_tool_offsets.cfg 70_tool_offsets.cfg
+          if [ -f ../tmp/firmware/rootfs/usr/local/share/firmware-config/extended/klipper/71_phase.cfg ]; then
+            cp ../tmp/firmware/rootfs/usr/local/share/firmware-config/extended/klipper/71_phase.cfg 71_phase.cfg
+          fi
           '
 
       - name: Upload firmware and verification records
@@ -239,6 +243,7 @@ jobs:
             firmware/NOTICE.md
             firmware/LICENSE
             firmware/70_tool_offsets.cfg
+            firmware/71_phase.cfg
             firmware/PHASE_STEPPING.md
             firmware/WORK_INSTRUCTIONS.md
             firmware/combined-source-lock.json
@@ -286,6 +291,8 @@ jobs:
           | U1_extended-AFC-PhaseStep-STC-MS_2.0_upgrade.bin | Extended + our fixes + AFC + phase stepping |
 
           Phase variants require an AT32 mainboard and remain off until configured. The non-phase build retains stock MCU binaries; remove existing phase-only configuration before switching to it. AFC and multiACE retain their upstream setup/activation procedures; inclusion does not configure external hardware automatically.
+
+          The three phase variants now bundle extended/klipper/71_phase.cfg with both auto_enable values False and the PHASE_CALIBRATE_XY button. Skip hand-creating phase.cfg or its macro. Existing active phase sections/custom files are preserved; review 71_phase.cfg.default when applicable. Match T0's actual accelerometer before calibration. The non-phase image excludes this config; customized phase files and SAVE_CONFIG entries require explicit review before rollback. The standalone 71_phase.cfg asset cannot add phase support to a non-phase image.
 
           All four must pass 64 calibration regressions, eight actual nozzle checks, six packed native/config checks and container round trips before this release can publish. Phase variants additionally verify target-image helper loading and packed MCU/host/recovery pairing. The non-phase build verifies unchanged stock MCU payloads and absence of phase host support. The AFC variant permits only the existing one-line extruder-name error-to-warning change outside calibration logic; its exact final hash is separately checked. AFC source is pinned in combined-source-lock.json.
 

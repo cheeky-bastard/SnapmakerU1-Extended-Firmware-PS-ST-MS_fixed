@@ -4,6 +4,8 @@ title: Phase Stepping
 
 # Phase Stepping (experimental)
 
+*Based on Justin's guide at `e64c6366`. Bundled-config setup adapted by cheeky-bastard on 2026-11-19; the motion tests, behavior notes and original test history are retained. The original guide is available in the pinned upstream source.*
+
 > **Warning**: Phase stepping drives the X/Y motor coil currents directly from the mainboard MCU at 20 kHz instead of using step pulses. It is experimental: tested in depth on one U1 and now running on a second. So far it appears to help (quieter motion, smoother walls) with no drawbacks observed: prints look the same and run at the same speed. That is not yet proven across many printers.
 
 The `phase` mod (`PROFILE=extended-phase`, combinable with other mods) builds the mainboard firmware from [`justinh-rahb/u1-klipper`](https://github.com/justinh-rahb/u1-klipper) (pinned in `overlays/mods/phase/95-phase-stepping/scripts/01-build-phase.sh`), a U1 port of [Hannott/kalico](https://github.com/Hannott/kalico)'s phase stepping, and installs the matching Klipper modules. It requires an **AT32 mainboard**: `klippy.log` shows `Main MCU model: stm32f103xe`. On other mainboards do not add the phase config.
@@ -12,32 +14,22 @@ The MCU images need GNU Arm 10.3-2021.10. Set `MCU_CROSS_PREFIX` to use one from
 
 ## Install
 
-Each build is Extended plus the named mods:
+Each build is Extended plus the named mods and this fork's single-tool calibration / mixed-nozzle fixes:
 
 | File | Contents |
 |---|---|
-| `U1_extended_*_upgrade.bin` | Extended, **no** phase stepping |
-| `U1_extended-phase_*_upgrade.bin` | Extended + phase stepping |
-| `U1_extended-multiace-phase_*_upgrade.bin` | Extended + multiACE + phase stepping |
-| `U1_extended-afc-phase_*_upgrade.bin` | Extended + AFC + phase stepping |
+| `U1_extended-STC-MS_2.0_upgrade.bin` | Extended + our fixes, **no** phase stepping |
+| `U1_extended-PhaseStep-STC-MS_2.0_upgrade.bin` | Extended + our fixes + phase stepping |
+| `U1_extended-multiACE-PhaseStep-STC-MS_2.0_upgrade.bin` | Extended + our fixes + multiACE + phase stepping |
+| `U1_extended-AFC-PhaseStep-STC-MS_2.0_upgrade.bin` | Extended + our fixes + AFC + phase stepping |
 
 Install the same way as any Extended release ([install guide](install.md)): copy the `.bin` to the root of a FAT32 USB drive, then on the touchscreen go to `Settings` > `About` > `Firmware Version` > `Local Update`. The update also flashes the mainboard and toolhead MCUs.
 
-Phase stepping is **off** after installing. Nothing changes until you add the config.
+Phase stepping is **off** after a fresh installation. The bundled CFG registers its commands and calibration button, with both `auto_enable` values False. Existing custom phase settings are preserved and may already enable it; inspect those settings before updating.
 
 ## Enable phase stepping
 
-1. Create `extended/klipper/phase.cfg` in your printer config (auto-included):
-
-   ```ini
-   [phase_stepping stepper_x]
-   auto_enable: False
-
-   [phase_stepping stepper_y]
-   auto_enable: False
-   ```
-
-   Restart Klipper (`RESTART`). This only registers the commands; the motors still step normally.
+1. On this fork's three phase-capable variants, `extended/klipper/71_phase.cfg` is already bundled. It registers X/Y phase stepping with `auto_enable: False` for both motors. Do not create a second `phase.cfg`; inspect the installed file or its `.default` if you already have a custom phase setup. Registration alone leaves the motors stepping normally. See [bundled CFG and upgrade behavior](combined_package.md#bundled-phase-config-and-upgrades).
 
 2. Home, move to the middle of the bed with the nozzle raised, and run the short per-motor test (on CoreXY one motor alone moves the head diagonally):
 
@@ -80,14 +72,7 @@ Alternatively, set `auto_enable: True` for both steppers. Phase stepping then tu
 
 ## Optional: measurement and calibration
 
-The toolhead accelerometer can measure each motor's vibration harmonics and fit angle corrections. Add to `phase.cfg` (T0 must be the toolhead on the carriage):
-
-```ini
-[phase_calibrate]
-accel_chip: lis2dw e0_lis2dw
-speed_min: 30
-speed_max: 80
-```
+The toolhead accelerometer can measure each motor's vibration harmonics and fit angle corrections. The bundled `71_phase.cfg` already contains `[phase_calibrate]` with `accel_chip: lis2dw e0_lis2dw`, `speed_min: 30` and `speed_max: 80`. T0 must be the toolhead on the carriage, and its actual accelerometer must match that setting. Do not add a duplicate section.
 
 ```
 PHASE_STEPPING_ENABLE STEPPER=stepper_x
@@ -98,24 +83,7 @@ PHASE_STEPPING_CALIBRATE STEPPER=stepper_x POINT=135,167,10
 
 - Use `GRAPH=0` on the printer. Plotting runs matplotlib on the U1's small host; copy the CSV from `/tmp` and plot elsewhere.
 - Sweeps whose top speed cannot be reached within the travel limit now fail with "a speed ramp needs more travel" (20–180 mm/s plans fine; 20–200 does not).
-- To keep calibration one click away, add this macro to `phase.cfg`:
-
-  ```ini
-  [gcode_macro PHASE_CALIBRATE_XY]
-  description: Calibrate phase stepping angle corrections for X and Y (T0 accelerometer)
-  gcode:
-    {% if printer.toolhead.homed_axes != "xyz" %}
-      G28
-    {% endif %}
-    T0 A0
-    PHASE_STEPPING_ENABLE STEPPER=stepper_x
-    PHASE_STEPPING_ENABLE STEPPER=stepper_y
-    PHASE_STEPPING_CALIBRATE STEPPER=stepper_x POINT=135,167,10 GRAPH=0
-    PHASE_STEPPING_CALIBRATE STEPPER=stepper_y POINT=135,167,10 GRAPH=0
-    RESPOND MSG="Phase calibration done. Review the results, then run SAVE_CONFIG to keep the corrections."
-  ```
-
-  Each run starts from no correction, so rerunning recalibrates from scratch.
+- **PHASE_CALIBRATE_XY** is already included as a macro button in `71_phase.cfg`. It homes if needed, selects T0, enables phase stepping, measures X and Y without on-printer graphs, and asks you to review the results before explicitly running `SAVE_CONFIG`. Add it to a Mainsail macro group if desired. Each run starts from no correction, so rerunning recalibrates from scratch.
 - `SAVE_CONFIG` stores accepted corrections. On the test printer calibration found nothing worth correcting: 2nd/4th harmonics were below noise, and the remaining vibration is a frame resonance around 55–80 Hz, which angle corrections cannot cancel.
 
 ## Test printers
@@ -149,4 +117,4 @@ Both U1s (AT32 mainboards) run the same non-stock TMC2240 driver tune, `tmc_auto
 
 ## Reverting
 
-Flash a regular Extended release or the stock firmware the same way; it restores the stock mainboard and toolhead MCU firmware. Remove `extended/klipper/phase.cfg` first, or Klipper will fail to start on firmware without phase stepping.
+Flash a regular Extended release or the stock firmware the same way; it restores the stock mainboard and toolhead MCU firmware. Remove or disable custom phase configuration and saved phase sections first; the non-phase image removes only the exact unmodified packaged `71_phase.cfg`. For other firmware, remove `extended/klipper/71_phase.cfg` and any legacy `phase.cfg` first, or Klipper will fail to start on firmware without phase stepping.

@@ -1,6 +1,6 @@
 # Snapmaker U1: phase stepping, single-tool calibration and mixed nozzles
 
-**Package: 0.1.0-dev2 | Firmware base: 2.0.0.205 | Updated: 2026-11-19**
+**Package: 0.1.0-dev3 | Firmware base: 2.0.0.205 | Updated: 2026-11-19**
 
 Personal experimental firmware maintained by [cheeky-bastard](https://github.com/cheeky-bastard).
 This package combines [Justin's phase-stepping work](https://github.com/justinh-rahb/SnapmakerU1-Extended-Firmware/tree/feat/u1-phase-stepping)
@@ -8,7 +8,7 @@ with our maintained independent tool calibration and mixed-nozzle print-start fi
 
 ## Instructions and downloads
 
-- [Justin's phase-stepping instructions](docs/phase_stepping.md) are preserved unchanged: hardware requirements, enablement, calibration, known issues and rollback.
+- [Justin's phase-stepping instructions](docs/phase_stepping.md) are retained with the bundled-config setup steps updated: hardware requirements, enablement, calibration, known issues and rollback.
 - [Single-tool calibration work instructions](docs/single_tool_calibration.md) cover the macro buttons, cleaning, validation, manual confirmations and Mainsail grouping.
 - [Combined installation and testing](docs/combined_package.md) explains this image, what remains off by default, acceptance and rollback.
 - [Experimental builds and checksums](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases).
@@ -30,6 +30,10 @@ Phase variants require an **AT32 mainboard** and remain off until configured. Th
 Each release includes four image/checksum pairs, a shared `SHA256SUMS`, `release-index.json`, both instruction sets and one verification ZIP per variant. All four must pass CI before publication. [Four-variant downloads](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/ST-MS-2.0-four-2-1).
 
 Boot-screen and Firmware Config profile labels use the same descriptive feature names: `STC` means single-tool calibration and `MS` means the mixed-size nozzle fix. The build/version labels contain no username.
+
+## Bundled phase configuration
+
+The three phase-capable images include `extended/klipper/71_phase.cfg` and the **PHASE_CALIBRATE_XY** macro button. Do not hand-create `phase.cfg` or duplicate its sections. Both `auto_enable` settings remain `False`; continue with [Justin's motion checks and manual enablement](docs/phase_stepping.md#enable-phase-stepping). The non-phase image excludes this CFG. See [upgrade and existing-config behavior](docs/combined_package.md#bundled-phase-config-and-upgrades).
 
 ## Included features
 
@@ -65,6 +69,6 @@ Every variant requires its own hardware acceptance. Prior results from Justin's 
 ## Attribution and license
 
 Based on [Paxx Extended Firmware](https://github.com/paxx12-snapmaker-u1/SnapmakerU1-Extended-Firmware), [Justin's firmware fork](https://github.com/justinh-rahb/SnapmakerU1-Extended-Firmware), [Justin's U1 Klipper phase port](https://github.com/justinh-rahb/u1-klipper), Snapmaker U1 Klipper and the Kalico phase-stepping work credited in Justin's guide.
-The original [upstream README](README.upstream.md), Justin's documentation, source history, copyright notices and [GPL-3.0 license](LICENSE) are retained. See [modification notice](NOTICE.combined.md) and [calibration notices](overlays/mods/cheeky_b52/NOTICE.md). Independent maintenance does not imply endorsement by upstream authors. No upstream PR is being submitted.
+The original [upstream README](README.upstream.md), Justin's credited documentation, source history, copyright notices and [GPL-3.0 license](LICENSE) are retained. See [modification notice](NOTICE.combined.md) and [calibration notices](overlays/mods/cheeky_b52/NOTICE.md). Independent maintenance does not imply endorsement by upstream authors. No upstream PR is being submitted.
 
 AFC normal persistence: the pinned upstream installer normally writes a debug flag. This fork replaces only that function with a guarded no-op and uses Paxx's Klipper startup-hook mechanism to restore AFC module links while its saved config include is active. Debug mode remains disabled. The installer adaptation and link restore are checked separately from the native calibration code.

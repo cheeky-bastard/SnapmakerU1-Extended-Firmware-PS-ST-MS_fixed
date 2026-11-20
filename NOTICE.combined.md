@@ -1,8 +1,8 @@
 # Combined package modification notice
 
-**Maintainer: cheeky-bastard | Package: 0.1.0-dev2 | Date: 2026-11-19**
+**Maintainer: cheeky-bastard | Package: 0.1.0-dev3 | Date: 2026-11-19**
 
-This independently maintained derivative combines Paxx Extended Firmware, Justin's experimental U1 phase-stepping firmware mod and the maintained independent-calibration/mixed-nozzle usermod. Full source history, GPL-3.0 license and existing copyright notices are preserved. Justin's phase-stepping guide is retained unchanged, with our calibration work instructions alongside it.
+This independently maintained derivative combines Paxx Extended Firmware, Justin's experimental U1 phase-stepping firmware mod and the maintained independent-calibration/mixed-nozzle usermod. Full source history, GPL-3.0 license and existing copyright notices are preserved. Justin's phase-stepping guide is retained with its manual CFG creation steps updated for the bundled default, with our calibration work instructions alongside it.
 
 Upstream projects:
 

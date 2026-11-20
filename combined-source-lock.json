@@ -1,5 +1,5 @@
 {
-  "package_version": "0.1.0-dev2",
+  "package_version": "0.1.0-dev3",
   "updated": "2026-11-19",
   "firmware_line": "2.0",
   "stock_firmware": "2.0.0.205",
@@ -49,5 +49,13 @@
   "afc_extruder_sha256": "4761c3681881ae98fc2ff4d1777d7fe9f788331e681cc1965915d469cef30296",
   "afc_installer_baseline_sha256": "39c4c793b8ee3e9a6eafcd78e83ce246c64265c3dbb8993ed4b1fa4c54f19d6d",
   "afc_installer_modified_sha256": "c6f8a27832638d12cce676da75649975f1523b95bbaee9230193a79888d96d21",
-  "afc_persistence": "Normal Paxx startup hook, no debug persistence"
+  "afc_persistence": "Normal Paxx startup hook, no debug persistence",
+  "bundled_phase_cfg": {
+    "filename": "71_phase.cfg",
+    "version": "0.1.0",
+    "sha256": "e3190a1073e0829f411c0f13bbb31a15ed85e2e9c159af01f2e2b4ff0d37ae8d",
+    "source_body_sha256": "de87e388dc4809b7ca4d7ba52ce7f6ee38da0ac00c0e5f9f94d2f4c13b8acac3",
+    "auto_enable": false,
+    "variants": "phase-capable only"
+  }
 }

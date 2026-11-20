@@ -1,0 +1,26 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright (c) 2026 cheeky-bastard
+# S49extended-config first copies packaged defaults. Retain an existing setup
+# instead of adding overlapping phase sections from a freshly copied default.
+set -eu
+case "${1:-start}" in start|restart|reload) ;; *) exit 0 ;; esac
+phase_config_root="${PHASE_CONFIG_ROOT:-/home/lava/printer_data/config}"
+phase_default_dir="${PHASE_DEFAULT_DIR:-/usr/local/share/firmware-config/extended/klipper}"
+phase_target="$phase_config_root/extended/klipper/71_phase.cfg"
+phase_default="$phase_default_dir/71_phase.cfg"
+test -f "$phase_target" || exit 0
+test -f "$phase_default" || exit 0
+# Never move or overwrite a customized 71_phase.cfg.
+phase_active_sha=$(sha256sum "$phase_target")
+phase_default_sha=$(sha256sum "$phase_default")
+[ "${phase_active_sha%% *}" = "${phase_default_sha%% *}" ] || exit 0
+for phase_existing in "$phase_config_root/printer.cfg" "$phase_config_root"/extended/klipper/*.cfg; do
+    [ "$phase_existing" = "$phase_target" ] && continue
+    [ -f "$phase_existing" ] || continue
+    if grep -Eq '^[[:space:]]*\[(phase_stepping[[:space:]]+stepper_[xy]|phase_calibrate|gcode_macro[[:space:]]+PHASE_CALIBRATE_XY)\][[:space:]]*(#.*)?$' "$phase_existing"; then
+        mv -f "$phase_target" "$phase_target.default"
+        echo "Existing phase sections retained; packaged 71_phase.cfg is available as 71_phase.cfg.default."
+        exit 0
+    fi
+done

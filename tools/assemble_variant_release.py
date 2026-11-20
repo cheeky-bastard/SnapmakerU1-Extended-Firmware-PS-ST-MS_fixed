@@ -50,8 +50,16 @@ def assemble(source, target):
         if variant['phase']:
             assert phase['source_commit'] == lock['justin_klipper_commit']
             assert int(phase['phase_tick_hz']) == 20000
+            cfg = (folder / '71_phase.cfg').read_bytes()
+            assert hashlib.sha256(cfg).hexdigest() == lock['bundled_phase_cfg']['sha256']
+            if '71_phase.cfg' in shared:
+                assert shared['71_phase.cfg'] == cfg
+            else:
+                shared['71_phase.cfg'] = cfg
+                (target / '71_phase.cfg').write_bytes(cfg)
         else:
             assert phase['included'] is False
+            assert not (folder / '71_phase.cfg').exists()
         shutil.copyfile(image, target / image.name)
         shutil.copyfile(checksum, target / checksum.name)
         checksums.append(digest + '  ' + image.name)
@@ -65,7 +73,7 @@ def assemble(source, target):
     assert len(used) == 4
     (target / 'SHA256SUMS').write_text('\n'.join(checksums) + '\n')
     (target / 'release-index.json').write_text(json.dumps({'variants': index}, indent=2) + '\n')
-    assert len(list(target.iterdir())) == 21
+    assert len(list(target.iterdir())) == 22
     print('Four variants verified and assembled: 4 images, 4 checksums, 4 verification bundles and shared instructions/records')
 
 

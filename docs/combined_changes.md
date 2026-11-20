@@ -1,5 +1,12 @@
 # Combined package change record
 
+## 0.1.0-dev3 — 2026-11-19
+
+- Bundle the supplied `71_phase.cfg` in the three phase-capable images, using a separate `phase/96-bundled-config` overlay; the native phase source and original build mod remain unchanged. Keep both `auto_enable` values False and include PHASE_CALIBRATE_XY without an automatic save.
+- Add an init guard that preserves existing active phase sections and custom 71_phase.cfg files. Use the stock hash cleanup to refresh/remove only the exact packaged default, including when returning to the non-phase variant.
+- Update the credited guide to skip hand-creating the CFG and macro. Retain Justin's motion tests, source pins, behavior and historical results. Document the T0 accelerometer setting, duplicate-section handling and custom/SAVE_CONFIG rollback steps.
+- Include the CFG as a release asset, check its actual packed hash in phase builds and its absence in the non-phase build, and test disabled defaults, macro rendering and existing-config preservation. Native calibration/nozzle payloads, phase algorithms, naming and AFC guards remain unchanged.
+
 ## 0.1.0-dev2 — 2026-11-19
 
 - Mirror Justin's four feature variants: Extended without phase, Extended + phase, multiACE + phase, and AFC + phase. Our calibration/nozzle fixes are present in every variant.
