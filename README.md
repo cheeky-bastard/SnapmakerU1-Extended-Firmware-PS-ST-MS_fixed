@@ -27,7 +27,7 @@ Every variant includes **single-tool calibration and the mixed-nozzle fix**. The
 
 Phase variants require an **AT32 mainboard** and remain off until configured. The first variant retains stock MCU binaries. Remove existing phase-only configuration before switching to the non-phase image. multiACE and AFC retain their [upstream setup instructions](docs/combined_package.md#optional-filament-systems); selecting a variant does not configure external hardware automatically.
 
-Each release includes four image/checksum pairs, a shared `SHA256SUMS`, `release-index.json`, both instruction sets and one verification ZIP per variant. All four must pass CI before publication. [Four-variant downloads](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/ST-MS-2.0-four-2-1).
+Each release includes four image/checksum pairs, a shared `SHA256SUMS`, `release-index.json`, both instruction sets and one verification ZIP per variant. All four must pass CI before publication. [Four-variant downloads](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/ST-MS-2.0-four-3-1).
 
 Boot-screen and Firmware Config profile labels use the same descriptive feature names: `STC` means single-tool calibration and `MS` means the mixed-size nozzle fix. The build/version labels contain no username.
 
@@ -50,9 +50,9 @@ The calibration commands appear as macro buttons in Mainsail/Fluidd. In Mainsail
 
 ## Verified four-variant release
 
-All four variants passed the [four-build CI run](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/actions/runs/44652785752): **64 calibration regressions, eight nozzle checks and six packed native/config checks per variant**, original-container round trips, phase host/MCU/recovery checks for the three phase builds, and stock-MCU preservation/phase-absence checks for the non-phase build. The AFC normal-persistence tests and multiACE configuration sanitizer also passed. Public image checksums, source identities and all per-variant verification bundles are verified.
+The [bundled-config four-build CI run](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/actions/runs/44659719706) passed **64 calibration regressions, eight nozzle checks, six packed native/config checks and eight bundled-CFG/default/upgrade checks per variant**, plus original-container round trips and the applicable phase, stock-MCU, AFC and multiACE checks. The three phase builds contain the exact disabled `71_phase.cfg`; the non-phase build excludes it. Public image checksums, CFG asset and per-variant records are verified.
 
-[Download the four-variant experimental release](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/ST-MS-2.0-four-2-1). Build source: `b000441fa09d9bc90eb647a01dbcb44440869cfa`. Each image still requires its own hardware acceptance; no printer was changed by this work.
+[Download the four-variant release with bundled 71_phase.cfg](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/ST-MS-2.0-four-3-1). It includes **22 assets**, including the standalone CFG and both instruction sets. Build source: `80992cb1ed2ffd4994af778e0be4fa4124ec5564`. Actual printer acceptance remains pending; no printer was changed by this work.
 
 ## Earlier single-variant build
 

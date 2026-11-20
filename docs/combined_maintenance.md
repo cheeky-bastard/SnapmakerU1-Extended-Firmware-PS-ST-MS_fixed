@@ -21,3 +21,9 @@ No upstream write or PR is authorized. No scheduled automatic merge is configure
 Keep all four variants in the source lock and matrix. The publication job requires all four and checks their shared source, records and checksums before release. AFC's existing invalid-extruder-name warning is the only permitted native-file delta; its final hash is distinct, while calibration methods and other native modules remain unchanged. Retain the source-guarded no-debug installer adaptation and test its startup helper for disabled state, reboot restoration and protected-module conflicts. Do not restore upstream debug persistence.
 
 Visible labels use `STC` (single-tool calibration), `MS` (mixed-size nozzle fix) and optional PhaseStep/multiACE/AFC names. Update both the boot-artwork label and `/etc/BUILD_PROFILE`, keep versions/filenames consistent and verify the packed identities. Internal legacy overlay paths remain stable for compatibility.
+
+## Bundled phase defaults
+
+The canonical CFG is `overlays/mods/phase/96-bundled-config/root/usr/local/share/firmware-config/extended/klipper/71_phase.cfg`. Keep both auto_enable values False unless the owner explicitly requests a policy change. Retain the owner's supplied input separately; do not publish a second diverging copy. The credited guide skips manual CFG/macro creation but retains the motion tests and source attribution.
+
+Update the source-lock CFG hash, retain old unmodified-default hashes in force-cleanup.sha256 and add the new one when changing defaults. Keep the startup duplicate guard and eight config/upgrade tests. Never erase custom phase files or SAVE_CONFIG corrections. Verify inclusion in phase images, absence in the non-phase image, and the standalone release asset. Match T0's actual accelerometer before phase calibration.

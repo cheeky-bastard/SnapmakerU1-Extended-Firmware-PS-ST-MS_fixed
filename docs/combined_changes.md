@@ -7,6 +7,10 @@
 - Update the credited guide to skip hand-creating the CFG and macro. Retain Justin's motion tests, source pins, behavior and historical results. Document the T0 accelerometer setting, duplicate-section handling and custom/SAVE_CONFIG rollback steps.
 - Include the CFG as a release asset, check its actual packed hash in phase builds and its absence in the non-phase build, and test disabled defaults, macro rendering and existing-config preservation. Native calibration/nozzle payloads, phase algorithms, naming and AFC guards remain unchanged.
 
+The [bundled-config four-build CI run](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/actions/runs/44659719706) passed **64 calibration regressions, eight nozzle checks, six packed native/config checks and eight bundled-CFG/default/upgrade checks per variant**, plus original-container round trips and the applicable phase, stock-MCU, AFC and multiACE checks. The three phase builds contain the exact disabled `71_phase.cfg`; the non-phase build excludes it. Public image checksums, CFG asset and per-variant records are verified.
+
+[Download the four-variant release with bundled 71_phase.cfg](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/ST-MS-2.0-four-3-1). It includes **22 assets**, including the standalone CFG and both instruction sets. Build source: `80992cb1ed2ffd4994af778e0be4fa4124ec5564`. Actual printer acceptance remains pending; no printer was changed by this work.
+
 ## 0.1.0-dev2 — 2026-11-19
 
 - Mirror Justin's four feature variants: Extended without phase, Extended + phase, multiACE + phase, and AFC + phase. Our calibration/nozzle fixes are present in every variant.
