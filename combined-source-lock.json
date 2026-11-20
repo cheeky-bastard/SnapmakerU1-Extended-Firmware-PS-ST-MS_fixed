@@ -1,0 +1,15 @@
+{
+  "package_version": "0.1.0-dev1",
+  "updated": "2026-11-19",
+  "firmware_line": "2.0",
+  "stock_firmware": "2.0.0.205",
+  "profile": "extended-cheeky_b52-phase",
+  "paxx_2_0_commit": "2c80e3dc495fdf724bc53c5c35c875010ee1668f",
+  "calibration_build_commit": "3953fdb6748fa80b278f42ff1456de18abe379c4",
+  "calibration_docs_commit": "a8efd8f02ccc2911a2eb7ca5d3b09b59837d28a8",
+  "justin_firmware_commit": "e64c63669b8f6802871147561f4a1d9d7c94ab10",
+  "justin_klipper_commit": "8825a2c8b547913e80aed9bce1e9021f9de38594",
+  "phase_auto_enabled": false,
+  "required_mainboard": "AT32",
+  "update_policy": "Stay on stock 2.0.0.205; review compatible fixes explicitly. Never auto-merge Paxx develop 2.1."
+}

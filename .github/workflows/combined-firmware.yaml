@@ -1,31 +1,31 @@
 # Restored 2026-11-14; current maintainer: cheeky-bastard
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2026 cheekyb52
-name: Build restored calibration firmware 2.0
+name: Build combined phase + calibration firmware 2.0
 
 on:
   push:
     branches:
-      - build/independent-tool-calibration
+      - develop
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: calibration-usermod-${{ github.ref }}
+  group: combined-phase-calibration-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    if: github.repository == 'cheeky-bastard/SnapmakerU1-Extended-Firmware'
+    if: github.repository == 'cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 90
     env:
       CI: '1'
     steps:
       - name: Checkout source and submodules
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
@@ -48,7 +48,7 @@ jobs:
           set -euo pipefail
           cat vars.mk >> "$GITHUB_ENV"
           base_version=$(sed -n 's/^FIRMWARE_VERSION=//p' vars.mk)
-          echo "GIT_VERSION=${base_version}-cheeky-bastard-calibration-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+          echo "GIT_VERSION=${base_version}-cheeky-bastard-phase-ST-MS-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
 
       - name: Restore original firmware download
         uses: actions/cache@v4
@@ -62,11 +62,32 @@ jobs:
           path: tmp/kernel/
           key: calibration-kernel-${{ runner.os }}-${{ runner.arch }}-${{ env.KERNEL_SHA }}
 
+      - name: Restore pinned phase source and toolchain downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            tmp/cache/u1-phase-8825a2c8b547913e80aed9bce1e9021f9de38594/.git
+            tmp/cache/gcc-arm-none-eabi-10.3-2021.10-*.tar.bz2
+          key: phase-source-toolchain-${{ runner.os }}-${{ runner.arch }}-8825a2c8-10.3-2021.10
+
+      - name: Verify the combined 2.0 source policy
+        run: |
+          python3 -B - <<'PY'
+          import json,pathlib
+          lock = json.loads(pathlib.Path("combined-source-lock.json").read_bytes())
+          assert lock["firmware_line"] == "2.0"
+          assert lock["profile"] == "extended-cheeky_b52-phase"
+          assert "FIRMWARE_VERSION=2.0.0\n" in pathlib.Path("vars.mk").read_text()
+          assert lock["phase_auto_enabled"] is False
+          assert lock["justin_klipper_commit"] == "8825a2c8b547913e80aed9bce1e9021f9de38594"
+          print("Combined profile remains on 2.0 with pinned optional phase stepping")
+          PY
+
       - name: Reject Windows line endings in usermod scripts
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          for path in Path("overlays/mods/cheeky_b52").rglob("*.sh"):
+          for path in [*Path("overlays/mods/cheeky_b52").rglob("*.sh"), *Path("overlays/mods/phase").rglob("*.sh")]:
               assert b"\r" not in path.read_bytes(), str(path)
           print("Usermod shell scripts use Unix line endings")
           PY
@@ -81,13 +102,13 @@ jobs:
         run: ./dev.sh make test
 
       - name: Build extended firmware with calibration usermod
-        run: ./dev.sh make build PROFILE=extended-cheeky_b52 OUTPUT_FILE=firmware/U1_calibration_2.0.bin
+        run: ./dev.sh make build PROFILE=extended-cheeky_b52-phase OUTPUT_FILE=firmware/U1_phase_ST_MS_2.0.bin
 
       - name: Check out pinned calibration regression sources
         uses: actions/checkout@v4
         with:
           repository: cheeky-bastard/Snapmaker-U1-Single-Tool-Calibration
-          ref: 4d6048e2ba7281bb0a19441d565f370f4b5c62e2
+          ref: a8efd8f02ccc2911a2eb7ca5d3b09b59837d28a8
           path: regression-source
 
       - name: Test the actual 2.0 calibration payload
@@ -111,7 +132,7 @@ jobs:
           PY
 
       - name: Unpack generated firmware
-        run: ./dev.sh scripts/helpers/unpack_firmware.sh "$PWD/firmware/U1_calibration_2.0.bin" "$PWD/tmp/calibration-verification"
+        run: ./dev.sh scripts/helpers/unpack_firmware.sh "$PWD/firmware/U1_phase_ST_MS_2.0.bin" "$PWD/tmp/calibration-verification"
 
       - name: Verify six files from the packed image
         shell: bash
@@ -145,15 +166,21 @@ jobs:
           print("All six packed-image payload checks and stock CFG migration entry passed")
           '
 
+      - name: Verify packed phase MCU and host pairing
+        run: ./dev.sh python3 -B tools/verify_combined_phase.py
+
       - name: Record firmware checksum and build identity
         shell: bash
         run: |
           ./dev.sh bash -euo pipefail -c '
           cd firmware
-          sha256sum U1_calibration_2.0.bin > U1_calibration_2.0.bin.sha256
-          printf "profile=extended-cheeky_b52\nsource_commit=%s\nversion=%s\n" "$(git rev-parse HEAD)" "$GIT_VERSION" > build-info.txt
-          cp ../overlays/mods/cheeky_b52/README.md TESTING.md
-          cp ../overlays/mods/cheeky_b52/NOTICE.md NOTICE.md
+          sha256sum U1_phase_ST_MS_2.0.bin > U1_phase_ST_MS_2.0.bin.sha256
+          printf "profile=extended-cheeky_b52-phase\nsource_commit=%s\nversion=%s\n" "$(git rev-parse HEAD)" "$GIT_VERSION" > build-info.txt
+          cp ../docs/combined_package.md TESTING.md
+          cp ../docs/phase_stepping.md PHASE_STEPPING.md
+          cp ../docs/single_tool_calibration.md WORK_INSTRUCTIONS.md
+          cp ../combined-source-lock.json combined-source-lock.json
+          cat ../NOTICE.combined.md ../overlays/mods/cheeky_b52/NOTICE.md > NOTICE.md
           cp ../LICENSE LICENSE
           cp ../overlays/mods/cheeky_b52/02-macros/root/usr/local/share/firmware-config/extended/klipper/70_tool_offsets.cfg 70_tool_offsets.cfg
           '
@@ -161,23 +188,28 @@ jobs:
       - name: Upload firmware and verification records
         uses: actions/upload-artifact@v4
         with:
-          name: calibration-usermod-${{ github.run_number }}-${{ github.run_attempt }}
+          name: combined-phase-calibration-${{ github.run_number }}-${{ github.run_attempt }}
           if-no-files-found: error
           retention-days: 14
           path: |
-            firmware/U1_calibration_2.0.bin
-            firmware/U1_calibration_2.0.bin.sha256
+            firmware/U1_phase_ST_MS_2.0.bin
+            firmware/U1_phase_ST_MS_2.0.bin.sha256
             firmware/payload-sha256.txt
             firmware/build-info.txt
             firmware/TESTING.md
             firmware/NOTICE.md
             firmware/LICENSE
             firmware/70_tool_offsets.cfg
+            firmware/PHASE_STEPPING.md
+            firmware/WORK_INSTRUCTIONS.md
+            firmware/combined-source-lock.json
+            firmware/phase-build.json
+            firmware/phase-payload-sha256.txt
 
   publish:
     name: Publish experimental test build
     needs: build
-    if: github.repository == 'cheeky-bastard/SnapmakerU1-Extended-Firmware'
+    if: github.repository == 'cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
     permissions:
@@ -186,53 +218,52 @@ jobs:
       - name: Download verified build assets
         uses: actions/download-artifact@v4
         with:
-          name: calibration-usermod-${{ github.run_number }}-${{ github.run_attempt }}
+          name: combined-phase-calibration-${{ github.run_number }}-${{ github.run_attempt }}
           path: release-assets
 
       - name: Check downloaded firmware checksum
         working-directory: release-assets
-        run: sha256sum --check U1_calibration_2.0.bin.sha256
+        run: sha256sum --check U1_phase_ST_MS_2.0.bin.sha256
 
       - name: Publish personal testing prerelease
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: cheeky-bastard/SnapmakerU1-Extended-Firmware
+          GH_REPO: cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed
         run: |
           set -euo pipefail
-          tag="calibration-2.0-restored-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          tag="phase-ST-MS-2.0-test-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
           notes_file="$RUNNER_TEMP/calibration-release-notes.md"
           cat > "$notes_file" <<'NOTES'
-          Experimental firmware 2.0 community test build of the independent tool calibration usermod.
+          Experimental combined firmware on stock U1 2.0.0.205: Justin's phase stepping, independent T1/T2/T3 calibration and the guarded mixed-nozzle print-start fix.
 
-          Based on the reviewed Paxx firmware 2.0.0.205 at upstream commit 2c80e3dc495fdf724bc53c5c35c875010ee1668f. This is the restored 2.0 build; prior printer tests remain specific to their original source/image sets.
+          Source pins and maintenance policy are attached in combined-source-lock.json. This stays on the reviewed Paxx 2.0 line; Paxx develop 2.1 is not merged. Justin's phase source is pinned to u1-klipper 8825a2c8b547913e80aed9bce1e9021f9de38594.
 
-          - Press T1/T2/T3 directly to start; separate backup arming is optional and disabled by default. Independent saves preserve the other three tools and shared reference.
-          - T0 displays a warning to use stock four-tool calibration.
-          - Clean/validate checks all six tool pairs without saving calibration.
-          - The mixed-nozzle print-start workaround is baked into print_task_config.py; it removes only the faulty diameter comparison and retains volume/material checks.
+          IMPORTANT: AT32 mainboard only, as described in Justin's unchanged PHASE_STEPPING.md. This image flashes rebuilt mainboard and toolhead MCU payloads with a matched USB version and recovery hashes. Phase stepping is off until configured; pre-existing phase.cfg can still enable it. No driver tuning or phase configuration is enabled automatically.
 
-          The calibration changes and CFG 0.1.1 are carried forward to the separately reviewed 2.0 source set. This image adds the separately guarded mixed-nozzle workaround, with eight actual-validation checks run during the build. All six payload files were independently verified from the packed firmware. Earlier calibration evidence includes 96 offline checks and one-printer live acceptance of the prior payload. This integrated image and the newer CFG still require their own hardware acceptance; wider coverage is being collected.
+          Press CALIBRATE_TOOL_1/2/3 directly to clean and save only that tool. T0 directs the operator to stock full calibration. CLEAN_AND_VALIDATE_OFFSETS saves nothing. Keep actual nozzle sizes correct in the printer and slicer; the faulty print-start diameter comparison is bypassed while volume/material checks remain active.
 
-          Read TESTING.md and obtain verified configuration/native backups before installation. Flashing this build updates an unmodified packaged CFG 0.1.0 automatically using stock checksum cleanup. Custom CFGs are preserved and need review against the new .default. The mixed-nozzle Python change requires the full firmware image; the CFG alone cannot apply it. For the separate button-start macro update, existing calibration-test-2-1 users can update the attached 70_tool_offsets.cfg without reflashing: back up the existing CFG/calibration data, review the CFG diff, replace extended/klipper/70_tool_offsets.cfg and restart Klipper while idle. The default calibration buttons do not require OFFSET_ARM_SAVE. Keep the actual nozzle sizes correctly configured in both printer and slicer: the faulty print-start diameter check is disabled. Use temperatures appropriate for the loaded material. No debug/factory mode is required.
+          CI verifies original-container round trips, 64 calibration regressions against actual byte-matched payloads, eight actual nozzle-validation checks during the build, six packed native/config hashes, target-image phase helper loading and packed phase MCU/host/recovery pairing. This does not establish hardware acceptance of the combined image.
 
-          Full instructions, exact source profiles, test results and rollback guidance:
-          https://github.com/cheeky-bastard/Snapmaker-U1-Single-Tool-Calibration
-
-          Report results and issues in the standalone calibration repository, including firmware build, tool tested and any error text. Exclude credentials, device addresses and raw calibration tables. Upstream submission is deferred while community testing is collected.
+          Read TESTING.md, PHASE_STEPPING.md and WORK_INSTRUCTIONS.md before use. Verify the attached SHA-256, obtain verified configuration/calibration/native backups and keep the known-good 2.0 image for rollback. Remove phase-only configuration before reverting to firmware without phase support. Use normal operation without debug/factory mode. Wider community testing remains pending and no upstream PR is submitted.
           NOTES
           printf '\nBuild source commit: `%s`\n' "$GITHUB_SHA" >> "$notes_file"
           gh release create "$tag" \
-            release-assets/U1_calibration_2.0.bin \
-            release-assets/U1_calibration_2.0.bin.sha256 \
+            release-assets/U1_phase_ST_MS_2.0.bin \
+            release-assets/U1_phase_ST_MS_2.0.bin.sha256 \
             release-assets/payload-sha256.txt \
             release-assets/build-info.txt \
             release-assets/TESTING.md \
             release-assets/NOTICE.md \
             release-assets/LICENSE \
             release-assets/70_tool_offsets.cfg \
+            release-assets/PHASE_STEPPING.md \
+            release-assets/WORK_INSTRUCTIONS.md \
+            release-assets/combined-source-lock.json \
+            release-assets/phase-build.json \
+            release-assets/phase-payload-sha256.txt \
             --repo "$GH_REPO" \
             --target "$GITHUB_SHA" \
-            --title "Firmware 2.0: independent tool calibration + mixed nozzles — experimental test build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" \
+            --title "Firmware 2.0: phase stepping + single-tool calibration + mixed nozzles — experimental ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" \
             --notes-file "$notes_file" \
             --prerelease --latest=false

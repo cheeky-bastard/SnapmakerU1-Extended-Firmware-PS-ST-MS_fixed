@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   custom-firmware-build:
+    if: github.repository == 'paxx12-snapmaker-u1/SnapmakerU1-Extended-Firmware'
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: write
