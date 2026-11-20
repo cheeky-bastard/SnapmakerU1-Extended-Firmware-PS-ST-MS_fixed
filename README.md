@@ -27,6 +27,12 @@ with our maintained independent tool calibration and mixed-nozzle print-start fi
 
 The calibration commands appear as macro buttons in Mainsail/Fluidd. In Mainsail, put the seven main buttons in a **Tool Calibration** macro group with **Standby** visibility. Actual nozzle sizes must remain correct in both printer and slicer.
 
+## Verified build
+
+The [first combined build](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/actions/runs/44648222176) passed **64 calibration regressions, eight nozzle checks, six packed native/config checks, original-container round trips, target-image phase helper loading and phase MCU/host/recovery pairing checks**.
+
+[Download the experimental 2.0 package](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/phase-ST-MS-2.0-test-1-1), built from `c9674669031cd2392bbaeccdcac6d9d1d153d42c`. The release includes the image, checksum, both instruction sets, source pins and payload records. Combined-image **hardware acceptance remains pending**; AT32 mainboard only, with phase stepping off until explicitly configured.
+
 ## Version and maintenance policy
 
 This repository stays on **2.0**. Paxx's current `develop` is on 2.1 and is **not** merged automatically. The latest known Paxx 2.0 source is included, plus Justin's pinned phase branch and our existing 2.0 mods. See [source pins](combined-source-lock.json), [change record](docs/combined_changes.md), and [maintenance instructions](docs/combined_maintenance.md). The separate 2.1 project remains separate until proven stable.

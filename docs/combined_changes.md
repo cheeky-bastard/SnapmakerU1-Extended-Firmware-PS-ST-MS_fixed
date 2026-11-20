@@ -9,4 +9,8 @@
 - Added this fork's README, source lock, combined installation/test/rollback instructions, calibration work instructions reused from the maintained project, maintenance policy and modification notice. Preserved upstream and Justin attribution and license.
 - Added a dedicated owner-scoped combined build/release workflow. Restricted upstream rolling-release and Cloudflare workflows to their upstream repository so the personal fork does not publish unrelated builds or attempt upstream deployment.
 
-Automated build results belong to the exact source commit and its attached records. Justin's earlier phase tests and our earlier calibration tests are retained as historical evidence; combined-image hardware acceptance is pending.
+The [first combined CI run](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/actions/runs/44648222176) passed all 64 calibration regressions, eight nozzle checks, six packed native/config checks, original-container round trips, target-image phase helper loading and packed phase MCU/host/recovery verification. Its [experimental release](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/phase-ST-MS-2.0-test-1-1) contains 13 assets, including both instruction sets and source/payload records.
+
+Build source: `c9674669031cd2392bbaeccdcac6d9d1d153d42c`. Image SHA-256: `0ed19c8f00ea369e57fbe6d9be85f107b1f1df243e2c7d580a6071a44ecb0fd2`.
+
+Automated build results belong to that exact source commit and its attached records. Justin's earlier phase tests and our earlier calibration tests are retained as historical evidence; combined-image hardware acceptance is pending. No printer was changed during this integration.
