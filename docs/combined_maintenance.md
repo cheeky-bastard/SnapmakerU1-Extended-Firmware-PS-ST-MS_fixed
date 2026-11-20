@@ -15,3 +15,9 @@ The `combined-source-lock.json` file records exact source inputs. Source trackin
 5. Publish only from this owner's repository as an experimental prerelease. Record the binary checksum, exact source commit and build verification records. Printer acceptance is a separate operator-controlled step. Keep raw logs, backups, credentials and calibration tables private.
 
 No upstream write or PR is authorized. No scheduled automatic merge is configured. The independent 2.1 repository is outside this package's update path.
+
+## Four-variant verification
+
+Keep all four variants in the source lock and matrix. The publication job requires all four and checks their shared source, records and checksums before release. AFC's existing invalid-extruder-name warning is the only permitted native-file delta; its final hash is distinct, while calibration methods and other native modules remain unchanged. Retain the source-guarded no-debug installer adaptation and test its startup helper for disabled state, reboot restoration and protected-module conflicts. Do not restore upstream debug persistence.
+
+Visible labels use `STC` (single-tool calibration), `MS` (mixed-size nozzle fix) and optional PhaseStep/multiACE/AFC names. Update both the boot-artwork label and `/etc/BUILD_PROFILE`, keep versions/filenames consistent and verify the packed identities. Internal legacy overlay paths remain stable for compatibility.

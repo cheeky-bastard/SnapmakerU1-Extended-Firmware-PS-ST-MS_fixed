@@ -46,9 +46,16 @@ Use the Linux/Docker setup in the upstream development guide:
 ./dev.sh make tools
 ./dev.sh make firmware
 ./dev.sh make test
-./dev.sh make build PROFILE=extended-cheeky_b52-phase PROFILE_LABEL=extended-PhaseStep-STC-MS OUTPUT_FILE=firmware/U1_phase_ST_MS_2.0.bin
+./dev.sh make build PROFILE=extended-cheeky_b52-phase PROFILE_LABEL=extended-PhaseStep-STC-MS OUTPUT_FILE=firmware/U1_extended-PhaseStep-STC-MS_2.0_upgrade.bin
 ```
 
 The dedicated GitHub workflow additionally runs the calibration regressions, eight actual nozzle checks during overlay application, six packed native/config checks and phase MCU/host/recovery integrity checks before publishing an experimental prerelease. It does not connect to a printer.
 
 The CI matrix tests every variant independently and publishes only when all four pass. Per-variant verification ZIPs contain build identity, native/config hashes and phase or stock-MCU verification records. The first single-variant release remains historical evidence for its exact image.
+
+## Verified release
+
+All four variants passed the [four-build CI run](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/actions/runs/44652785752): **64 calibration regressions, eight nozzle checks and six packed native/config checks per variant**, original-container round trips, phase host/MCU/recovery checks for the three phase builds, and stock-MCU preservation/phase-absence checks for the non-phase build. The AFC normal-persistence tests and multiACE configuration sanitizer also passed. Public image checksums, source identities and all per-variant verification bundles are verified.
+
+[Download the four-variant experimental release](https://github.com/cheeky-bastard/SnapmakerU1-Extended-Firmware-PS-ST-MS_fixed/releases/tag/ST-MS-2.0-four-2-1). Build source: `b000441fa09d9bc90eb647a01dbcb44440869cfa`. Each image still requires its own hardware acceptance; no printer was changed by this work.
+
